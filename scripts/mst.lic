@@ -1,0 +1,177 @@
+=begin
+    Multi-setting teleporter manager
+
+     author: Jymamon (gs4-jymamon@hotmail.com)
+       game: Gemstone
+       tags: teleporter
+    version: 2016.12.20.01
+=end
+
+=begin
+    history:
+        2016.12.20.01 Created
+=end
+
+no_pause_all
+hide_me
+script.want_downstream_xml = true
+
+# Before exiting, undef the class so we can redefine it next run.
+before_dying {
+    Scripting.send(:remove_const, :MultiSettingTeleporter)
+}
+
+class MultiSettingTeleporter
+    attr_reader :settings, :teleporter
+
+    def current_slot=(value)
+        @settings[@teleporter.noun][:current] = value
+    end
+
+    def current_slot
+        return @settings[@teleporter.noun][:current]
+    end
+
+    def initialize(device)
+        @teleporter = GameObj.inv.find { |obj| obj.name =~ /\b#{Regexp.escape(device.strip)}$/i }
+
+        if (@teleporter.nil?)
+            echo "Unable to find your #{device}. Exiting."
+            exit
+        end
+
+        # If any of our settings are missing, get default values.
+        @settings = Hash.new unless @settings
+
+        if @settings[@teleporter.noun].nil? # Always true until/unless hooked up to Settings[Char.name]
+            @settings[@teleporter.noun] = Hash.new
+            @settings[@teleporter.noun][:destinations] = Array.new
+            @settings[@teleporter.noun][:current] = 0
+            self.scan_teleporter_settings
+        end
+    end
+
+    def add_downstream_hook(hookname, hookproc)
+        before_dying {
+            DownstreamHook.remove(hookname)
+        }
+
+        DownstreamHook.add(hookname, hookproc)
+    end
+
+    def add_upstream_hook(hookname, hookproc)
+        before_dying {
+            UpstreamHook.remove(hookname)
+        }
+
+        UpstreamHook.add(hookname, hookproc)
+    end
+
+    def add_teleport_hook
+        doteleport_hook = proc {|client_string|
+            if client_string =~ /^(?:<c>)?#{$clean_lich_char}(?:teleport)\s*(.*)/i
+                destination = $1
+
+                if ( destination.to_i==0 )
+                    if (destination =~ /reset\b/)
+                        scan_teleporter_settings
+                        return
+                    else
+                        echo "looking for #{destination}" if $debug
+                        destination = @settings[@teleporter.noun][:destinations].find_index{|dest| dest =~ /#{destination}/i}.to_i
+                    end
+                end
+
+                if ( @current_slot!=destination )
+                    echo "setting teleporter to #{destination}" if $debug
+                    $_SERVER_.puts "twist ##{@teleporter.id} to #{destination}"
+                    @current_slot = destination
+                end
+
+                $_SERVER_.puts "rub ##{@teleporter.id}"
+            else
+                client_string
+            end
+        }
+
+        add_upstream_hook('mst_doteleport_hook', doteleport_hook)
+    end
+
+    def add_watchchange_hook
+        watchchange_hook = proc {|server_string|
+            set_pattern           = "The <a exist=\"#{@teleporter.id}\" noun=\"#{@teleporter.noun}\">#{@teleporter.noun}<\/a> begins to glow faintly, then the phosphorescence fades away"
+            push_pattern          = "The <a exist=\"#{@teleporter.id}\" noun=\"#{@teleporter.noun}\">#{@teleporter.noun}<\/a> begins to glow and gradually, a fiery sigil appears on its surface, depicting the numeral ([0-9]+).  It flickers a few moments, then disappears."
+            pull_or_twist_pattern = "The <a exist=\"#{@teleporter.id}\" noun=\"#{@teleporter.noun}\">#{@teleporter.noun}<\/a> begins to glow, giving off a greenish phosphorescence.  Slowly a fiery sigil appears, depicting the numeral ([0-9]+).  It flickers a few moments like a candle dancing in mist, then fades away to nothing."
+
+            if server_string =~ /^#{set_pattern}/
+                @settings[@teleporter.noun][self.current_slot] = Room.current.title
+                respond "mst: [Updated #{@teleporter.noun} destinations.]" if $debug
+
+            elsif server_string =~ /^#{push_pattern}/
+                self.current_slot = $1.to_i
+                respond "mst: [Updated #{@teleporter.noun} current target.]" if $debug
+
+            elsif server_string =~ /^#{pull_or_twist_pattern}/
+                self.current_slot = $1.to_i
+                respond "mst: [Updated #{@teleporter.noun} current target.]" if $debug
+
+            end
+
+            server_string
+        }
+
+        add_downstream_hook('mst_change_hook', watchchange_hook)
+    end
+
+    def scan_teleporter_settings
+        settings_hook = proc {|server_string|
+            if server_string =~ /^<prompt/
+                DownstreamHook.remove('mst_settings_hook')
+                nil
+
+            elsif server_string =~ /^\s*([0-9]+)\s(.*)/
+                slot = $1.to_i
+                dest = $2
+
+                @settings[@teleporter.noun][:destinations][slot] = dest
+                nil
+
+            elsif server_string =~ /^<pushBold\/>-&gt; <popBold\/>\s*([0-9]+)\s(.*)/
+                slot = $1.to_i
+                dest = $2
+
+                self.current_slot = slot
+                @settings[@teleporter.noun][:destinations][slot] = dest
+                nil
+
+            else
+                server_string
+
+            end
+        }
+
+        add_downstream_hook('mst_settings_hook', settings_hook)
+        $_SERVER_.puts "tap ##{teleporter.id}"
+    end
+
+    def start
+        add_watchchange_hook()
+        add_teleport_hook()
+    end
+end
+
+# Adjust args to get the correct array
+args = script.vars.length < 2 ? script.vars : script.vars[1..-1]
+
+if (args.nil? || args[0].nil?)
+    respond "Usage: #{script.name} [teleporter device]"
+else
+    mst = MultiSettingTeleporter.new(args[0])
+    mst.start()
+
+    respond "\';teleport [destination]\' to use"
+
+    while ( true )
+        sleep 1
+    end
+end

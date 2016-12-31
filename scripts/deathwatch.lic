@@ -1,0 +1,121 @@
+=begin
+    Records current time and exp at each death. Use ;deaths to report them back.
+
+     author: Jymamon (gs4-jymamon@hotmail.com)
+       game: Gemstone
+       tags: death,tracker
+    version: 2015.04.01.01
+=end
+
+=begin
+    history:
+        2015.04.01.01 General scripts updates after hiatus
+        2012.01.25.01 Pretty print numbers and track initial exp
+        2012.01.22.02 Report EXP until death no longer "Recent"
+        2012.01.13.02 Track first run time as well
+        2012.01.13.01 Initial release
+=end
+
+def pretty(i)
+    if (i < 1000)
+        return i.to_s
+    else
+        stringified = ""
+        k = i
+        begin
+            stringified = sprintf(",%03d%s", (k % 1000), stringified);
+            k = (k - (k % 1000)) / 1000
+        end while (k > 1000)
+        return("#{k}#{stringified}")
+    end
+end
+
+
+Settings.load
+# Next line copied from infomon.lic. Not sure if it's really necessary.
+sleep(0.1) until Char.name and not Char.name.empty?
+
+no_pause_all # Don't stop filtering when scripts are paused as it'll lead to
+             # inconsistent user experience.
+hide_me      # Don't show up in ;l by default
+done = false
+#
+# Load our settings
+#
+settings = Settings[Char.name]
+
+# If any of our settings are missing, get default values.
+settings = Hash.new unless settings
+
+if settings['deaths'].nil?
+    settings['deaths'] = Array.new
+end
+
+if settings['started'].nil?
+    settings['started'] = Time.now.to_i
+end
+
+if settings['startexp'].nil?
+    settings['startexp'] = Stats.exp
+end
+
+#
+# Make sure things get cleaned up on exit
+#
+before_dying {
+    UpstreamHook.remove('deathwatch_reporthook')
+
+    Settings.load # avoid reverting other character's settings if multiaccounting
+    Settings[Char.name] = settings
+    Settings.save
+    done = true
+}
+
+#
+# Add command hook ;deaths
+#
+action1 = proc { |client_string|
+    if client_string =~ /^(?:<c>)?#{$clean_lich_char}(?:deaths)(.*)/i
+        params  = $1.to_i==0 ? 5 : $1.to_i
+
+        if scr = (Script.running + Script.hidden).find { |val| val.name.downcase == 'deathwatch' }
+            if ( params =~ /--reset/ )
+                settings['deaths'] = Array.new
+                settings['started'] = Time.now.to_i
+                settings['startexp'] = Stats.exp
+            end
+
+            #
+            # Display deaths
+            #
+            exp = settings['startexp'].to_i
+            respond("You've been tracking deaths since #{Time.at(settings['started'].to_i)} and #{pretty(exp)} experience")
+            if settings['deaths'].length==0
+                respond "No deaths recorded"
+            else
+                settings['deaths'].sort{|a,b| b[0].to_i <=> a[0].to_i}.first(params).reverse.each { |k|
+                   exp = ((k[1] + 50000) - Stats.exp).to_i
+                   respond( sprintf("Time of death #{Time.at(k[0].to_i)}. Experience at death: #{pretty(k[1])}. %s",
+                            (Stats.exp - k[1] < 50000 ) ? "(#{pretty(exp)} until gone)" : "(No longer recent.)" ) )
+                }
+            end
+        end
+        nil
+    else
+        client_string
+    end
+}
+
+UpstreamHook.add('deathwatch_reporthook', action1)
+
+#
+# Watch for deaths
+#
+while line = get
+    if line =~ /^It seems you have died, my friend\./i
+        death_time = Time.now.to_i;
+
+        settings['deaths'].push([death_time.to_i, Stats.exp]);
+        respond("Time of death #{Time.at(death_time)}. Experience at death: #{Stats.exp}")
+    end
+end

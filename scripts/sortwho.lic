@@ -1,0 +1,72 @@
+=begin
+
+    sortwho - Sort players output of 'who'
+
+    author: Jymamon (gs4-jymamon@hotmail.com)
+    version: 2016.07.22.01
+
+    history:
+    - 2016.07.22.01 Fix for WHO HOUSE {house}
+    - 2016.01.10.01 Initial version
+=end
+
+status_tags
+no_kill_all
+no_pause_all
+
+begin
+    players = nil
+    capturing = false
+        
+    action = proc { |server_string|
+        if server_string =~ /Brave Adventurers Questing( from .*)?:/i
+            players = Hash.new
+            capturing = true
+            server_string
+
+        elsif server_string =~ /(Active Players|Total):/
+            if capturing
+                capturing = false
+                
+                players.keys.sort.each_slice(4) { |group|
+                    output = ""
+                    group.each { |player|
+                        output += "<a exist=\"%s\" noun=\"%s\">%s</a>%s" % [players[player], player, player, ' ' * (18 - player.length)]
+                    }
+                    output += "\n"
+                    output.gsub!(/<.*?>/, '') unless $frontend == 'stormfront'
+                    puts output
+                }
+                   
+                server_string
+
+            else
+                server_string
+
+            end
+
+        elsif capturing
+            if ( server_string =~ /<a exist="([^"]+)" noun="([^"]+)">/ )
+                server_string.scan(/<a exist="([^"]+)" noun="([^"]+)">/) { |id, name|
+                    players["#{name}"] = id
+                }
+
+                nil
+
+            else
+                server_string
+
+            end
+
+        else
+            server_string
+
+        end
+    }
+
+    DownstreamHook.add('who-sort', action) 
+    wait_until { false }
+
+ensure
+    DownstreamHook.remove('who-sort')
+end
