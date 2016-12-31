@@ -1,0 +1,223 @@
+=begin
+
+    Forage for ingredients/herbs
+
+    ;forage --help
+
+     author: Jymamon (gs4-jymamon@hotmail.com)
+       game: Gemstone
+       tags: forage,foraging,bounties,603
+    version: 2016.12.23.01
+
+    history:
+        2016.12.23.01 Work with copy/paste of foraging bounty text
+        2015.04.02.01 Random updates post 2.5 year hiatus
+        2011.07.17.01 Initial version based on pure.lic
+
+=end
+
+# -----------------------------------------------------------------------------
+# Require the helper library as I'm tired of C+P many of the same code blocks.
+# -----------------------------------------------------------------------------
+if File.file?("#{$script_dir}/cantrips.lic")
+    load("#{$script_dir}/cantrips.lic")
+else
+    echo "\n\ncantrips.lic is required: ';repos download cantrips.lic'\n\n"
+    exit
+end
+
+if ( $CantripsVer < "2015.04.02.01" )
+    Cantrips::Message.bold "-- Running with an untested version of cantrips.  This may not work."
+end
+
+
+class Forage
+    # -----------------------------------------------------------------------------
+    # Option parsing/setup
+    # -----------------------------------------------------------------------------
+    require 'optparse'
+
+    Options = Struct.new(:ingredient,:number,:container,:location,:bounty)
+
+    class Parser
+        def self.parse(options)
+            args = Options.new()
+
+            # defaults
+            args.container = Vars.foragesack
+            args.number    = 5
+
+            opt_parser = OptionParser.new { |opts|
+                opts.banner = "Usage: Purify.lic [options]"
+
+
+                opts.on("-iINGREDIENT", "--ingredient=INGREDIENT", "What to forage for. Required.") { |parameter|
+                    args.ingredient = parameter
+                }
+
+                opts.on("-lLOOTSACK", "--lootsack=LOOTSACK", "Where to get gems. Defaults to Vars.foragesack.") { |parameter|
+                    args.container = parameter
+                }
+
+                opts.on("-nNUMBER", "--number=NUMBER", "How many for forage for. Defaults to 5.") { |parameter|
+                    args.number = parameter.to_i
+                }
+
+                opts.on("--location=LOCATION", "Only consider rooms with the specific Room.location. Defaults to any room.") { |parameter|
+                    args.location = parameter
+                }
+
+                opts.on("--bounty", "Automatically determine what to forage from current bounty assignment.") {
+                    args.bounty = true
+                }
+
+                opts.on("-h", "--help", "Prints this help") {
+                    echo opts.to_s
+                    exit
+                }
+            }
+
+            opt_parser.parse!(options)
+
+            # Hack-ish but sufficient for catching unused parameters
+            if ( options.any? )
+                opt_parser.parse("--help")
+            end
+
+            error = false
+
+            if ( args.container.nil? )
+                echo "container must be set in vars or passed as an option"
+                error = true
+            end
+
+            if (args.bounty)
+                bounty = Forage.parse_bounty(bounty?)
+
+                if (!bounty.nil?)
+                    args.ingredient = bounty[:ingredient]
+                    args.location = bounty[:location]
+                    args.number = bounty[:number]
+                    echo "I need #{args.number} of #{args.ingredient} from #{args.location}"
+                else
+                    fput "Failed to parse bounty!"
+                    error = true
+                end
+            end
+
+            if ( args.ingredient.nil? )
+                echo "ingredient must be specified"
+                error = true
+            end
+
+            if error then exit end
+
+            # Tranlate to game objects
+            args.container  = Cantrips::Items.find(args.container)
+
+            return args
+        end
+    end
+
+    def Forage.parse_bounty(text)
+        results = Hash.new
+        if ( text =~ /requires (?:a |an )?(.*) (?:grows |found )(?:on |in )(.*?)(?:(?: between| near| under) .*)?\.  These samples must be in pristine condition.  You have been tasked to retrieve (\d+)(?: more)? sample(s)?\./ )
+            results[:ingredient] = $1
+            results[:location] = $2
+            results[:number] = $3.to_i
+            return results
+        else
+            return nil
+        end
+    end
+
+    def self.run(parameters)
+        timer = Cantrips::Stopwatch.new()
+        timer.start()
+        options = Parser.parse(parameters)
+        start = Room.current.id     # Starting room to return to.
+
+        # For the 10 nearest rooms that contain the forageable
+        rooms = Array.new
+        if (options.ingredient=~/\bayana\b/)
+            rooms = Room.current.find_all_nearest_by_tag("ayana weed")
+            rooms.concat Room.current.find_all_nearest_by_tag("ayana berry")
+            rooms.concat Room.current.find_all_nearest_by_tag("ayana lichen")
+            rooms.concat Room.current.find_all_nearest_by_tag("ayana leaf")
+            rooms.concat Room.current.find_all_nearest_by_tag("ayana root")
+        else
+            rooms = Room.current.find_all_nearest_by_tag(options.ingredient)
+        end
+
+        if ( ! options.location.nil? )
+            rooms = rooms.select { |room|
+                Room[room].location==options.location;
+            }
+        end
+
+        rooms.slice(0,20).each { |room|
+            base = options.ingredient
+            base.gsub!("handful of", "");
+            base.gsub!("bunch of", "");
+            base.gsub!("ear of", "");
+            base.gsub!("sprig of", "");
+            base.gsub!("cluster of", "");
+            base.gsub!("stem of", "");
+            base.gsub!("layer of", "");
+            base.gsub!("ayana weed", "ayana leaf");
+            base.gsub!("ayana berry", "ayana leaf");
+            base.gsub!("ayana lichen", "ayana leaf");
+            base.gsub!("ayana root", "ayana leaf");
+            base.gsub!("dark pink rain lily", "pink rain lily");
+            base.gsub!("fragrant white lily", "white lily");
+
+            # Find the shortest path to the room.
+            previous, shortest_distances = Room[start].dijkstra(room)
+
+            # Threshold check so I don't accidently find myself running
+            # from EN to WL unexpectedly.
+            if shortest_distances[room] > 50
+                respond "Distance is greater than threshold from start room. To go there, unpause the script.  To abort, kill the script."
+                pause_script
+            end
+
+            # Go there.
+            Cantrips::Locations.go2(room)
+
+            # Forage up to 5 of the forageable.
+            n = Cantrips::Locations.forage(options.ingredient, [5,options.number].min, options.container)
+            respond "Found #{n} #{options.ingredient}"
+
+            # Decrement the number needed
+            options.number -= n
+            # Stop looping if we found all we need
+            break if options.number == 0
+            respond "Need #{options.number} more #{options.ingredient}"
+        }
+
+        # Back to where we started
+         Cantrips::Locations.go2(start)
+
+        timer.stop()
+
+        # Let me know if I found less than I wanted.
+        if ( options.number!=0 )
+            options.location = options.location.nil? ? "anywhere" : options.location;
+
+            respond "#{options.number} more #{options.ingredient} from #{options.location} need to be foraged later"
+        end
+
+        respond "Total time: #{timer.last}"
+
+    end
+end
+
+args = nil
+
+if parsed=Forage.parse_bounty(script.vars[0])
+    args = ["--ingredient=#{parsed[:ingredient]}", "--location=#{parsed[:location]}", "--number=#{parsed[:number]}"]
+else
+    args = script.vars.length < 2 ? script.vars : script.vars[1..-1]
+end
+
+Forage.run(args)
