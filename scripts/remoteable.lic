@@ -1,0 +1,485 @@
+require 'drb'
+
+# This should not be hardcoded. Need to investigate using a local Rhinda (or Rhinda-like) servive
+# to make it discoverable. The goal is no IG character communication should be necessary to get
+# the client and server talking.
+SERVER_URI="druby://localhost:20002"
+
+hide_me
+
+class RemoteChar
+    # We don't want this class sent over the wire by DRB, instead, always
+    # execute the code locally and return only the result.
+    include DRbUndumped
+
+    attr_reader :char,
+                :charid
+
+    attr_accessor :commands
+
+    # ---------------------------------------------------------------------------------------------
+    # Store a pointer to Char and the character's object ID for easy reference.
+    # ---------------------------------------------------------------------------------------------
+    def initialize(char)
+        @char     = char
+        @charid   = ("-10" + XMLData.player_id.to_s).to_s
+        @commands = Array.new
+    end
+
+    def ActiveSpells
+        active_spells = Hash.new
+        Spell.active.each { |spell|
+            active_spells[spell.num.to_s] = spell.timeleft
+        }
+        active_spells
+    end
+
+    # ---------------------------------------------------------------------------------------------
+    # Instead of directly exposing all of the lich classes, just attempt to defer to them for
+    # any unimplemented method that is invoked. This is likely not very efficient for methods not
+    # defined anywhere as we'll be searched, then the Char below will be searched and it, in turn,
+    # causes serveral other classes to be searched and so forth.
+    # ---------------------------------------------------------------------------------------------
+    def method_missing(method, *args)
+        begin
+            return @char.__send__(method, *args)
+        rescue
+            begin
+                return Spells.__send__(method, *args)
+            rescue
+                begin
+                    return Skills.__send__(method, *args)
+                rescue
+                    begin
+                        return Stats.__send__(method, *args)
+                    rescue
+                        begin
+                            return XMLData.__send__(method, *args)
+                        rescue
+                        end
+                    end
+                end
+            end
+
+        end
+        raise NoMethodError
+    end
+
+    # ---------------------------------------------------------------------------------------------
+    # Define all of the below as RemoteChar methods. This will be executed in the context of the
+    # remote character sot he XMLData referenced is that characters data, not the data of the
+    # instance reading the results.
+    # ---------------------------------------------------------------------------------------------
+
+    #
+    # Status affects
+    #
+    def poisoned?
+        return XMLData.indicator['IconPOISONED'] == 'y'
+    end
+
+    def diseased?
+        return XMLData.indicator['IconDISEASED'] == 'y'
+    end
+
+    def stunned?
+        return XMLData.indicator['IconSTUNNED'] == 'y'
+    end
+
+    def bleeding?
+        XMLData.indicator['IconBLEEDING'] == 'y'
+    end
+
+    def webbed?
+        XMLData.indicator['IconWEBBED'] == 'y'
+    end
+
+    def dead?
+        XMLData.indicator['IconDEAD'] == 'y'
+    end
+
+    #
+    # Visibility - not sure we need these
+    #
+    def hidden?
+        XMLData.indicator['IconHIDDEN'] == 'y'
+    end
+
+    def invisible?
+        XMLData.indicator['IconINVISIBLE'] == 'y'
+    end
+
+    #
+    # Group status
+    #
+    def grouped?
+        XMLData.indicator['IconJOINED'] == 'y'
+    end
+
+    #
+    # Position
+    #
+    def sitting?
+        XMLData.indicator['IconSITTING'] == 'y'
+    end
+
+    def kneeling?
+        XMLData.indicator['IconKNEELING'] == 'y'
+    end
+
+    def prone?
+        XMLData.indicator['IconPRONE'] == 'y'
+    end
+
+    def notstanding?
+        XMLData.indicator['IconSTANDING'] == 'n'
+    end
+
+    def standing?
+        XMLData.indicator['IconSTANDING'] == 'y'
+    end
+
+    #
+    # Character information
+    #
+    def Stats
+        return { "str" => Stats.str,
+                 "con" => Stats.con,
+                 "dex" => Stats.dex,
+                 "agi" => Stats.agi,
+                 "dis" => Stats.dis,
+                 "aur" => Stats.aur,
+                 "log" => Stats.log,
+                 "int" => Stats.int,
+                 "wis" => Stats.wis,
+                 "inf" => Stats.inf};
+    end
+
+    def Race
+        Stats.race
+    end
+
+    def Profession
+        Stats.prof
+    end
+
+    def Gender
+        Stats.gender
+    end
+
+    def Age
+        Stats.age
+    end
+
+    def Level
+        Stats.level
+    end
+
+    def Exp
+        return Stats.exp
+    end
+
+    def Info
+        return Char.info
+    end
+
+    def Wounds
+        return { "left eye"   => XMLData.injuries["leftEye"  ]['wound'], 
+                 "right eye"  => XMLData.injuries["rightEye" ]['wound'], 
+                 "head"       => XMLData.injuries["head"     ]['wound'], 
+                 "neck"       => XMLData.injuries["neck"     ]['wound'], 
+                 "back"       => XMLData.injuries["back"     ]['wound'], 
+                 "chest"      => XMLData.injuries["chest"    ]['wound'], 
+                 "abdomen"    => XMLData.injuries["abdomen"  ]['wound'], 
+                 "left arm"   => XMLData.injuries["leftArm"  ]['wound'], 
+                 "right arm"  => XMLData.injuries["rightArm" ]['wound'], 
+                 "right hand" => XMLData.injuries["rightHand"]['wound'], 
+                 "left hand"  => XMLData.injuries["leftHand" ]['wound'], 
+                 "left leg"   => XMLData.injuries["leftLeg"  ]['wound'], 
+                 "right leg"  => XMLData.injuries["rightLeg" ]['wound'], 
+                 "left foot"  => XMLData.injuries["leftFoot" ]['wound'], 
+                 "right foot" => XMLData.injuries["rightFoot"]['wound'], 
+                 "nerves"     => XMLData.injuries["nsys"     ]['wound']
+              };
+    end
+ 
+    def Scars
+        return { "left eye"   => XMLData.injuries["leftEye"  ]['scar'], 
+                 "right eye"  => XMLData.injuries["rightEye" ]['scar'], 
+                 "head"       => XMLData.injuries["head"     ]['scar'], 
+                 "neck"       => XMLData.injuries["neck"     ]['scar'], 
+                 "back"       => XMLData.injuries["back"     ]['scar'], 
+                 "chest"      => XMLData.injuries["chest"    ]['scar'], 
+                 "abdomen"    => XMLData.injuries["abdomen"  ]['scar'], 
+                 "left arm"   => XMLData.injuries["leftArm"  ]['scar'], 
+                 "right arm"  => XMLData.injuries["rightArm" ]['scar'], 
+                 "right hand" => XMLData.injuries["rightHand"]['scar'], 
+                 "left hand"  => XMLData.injuries["leftHand" ]['scar'], 
+                 "left leg"   => XMLData.injuries["leftLeg"  ]['scar'], 
+                 "right leg"  => XMLData.injuries["rightLeg" ]['scar'], 
+                 "left foot"  => XMLData.injuries["leftFoot" ]['scar'], 
+                 "right foot" => XMLData.injuries["rightFoot"]['scar'], 
+                 "nerves"     => XMLData.injuries["nsys"     ]['scar']
+              };
+    end
+
+    def SkillRanks
+        return { "twoweaponcombat"          => Skills.twoweaponcombat,
+                 "armoruse"                 => Skills.armoruse,
+                 "shielduse"                => Skills.shielduse,
+                 "combatmaneuvers"          => Skills.combatmaneuvers,
+                 "edgedweapons"             => Skills.edgedweapons,
+                 "bluntweapons"             => Skills.bluntweapons,
+                 "twohandedweapons"         => Skills.twohandedweapons,
+                 "rangedweapons"            => Skills.rangedweapons,
+                 "thrownweapons"            => Skills.thrownweapons,
+                 "polearmweapons"           => Skills.polearmweapons,
+                 "brawling"                 => Skills.brawling,
+                 "ambush"                   => Skills.ambush,
+                 "multiopponentcombat"      => Skills.multiopponentcombat,
+                 "combatleadership"         => Skills.combatleadership,
+                 "physicalfitness"          => Skills.physicalfitness,
+                 "dodging"                  => Skills.dodging,
+                 "arcanesymbols"            => Skills.arcanesymbols,
+                 "magicitemuse"             => Skills.magicitemuse,
+                 "spellaiming"              => Skills.spellaiming,
+                 "harnesspower"             => Skills.harnesspower,
+                 "elementalmanacontrol"     => Skills.emc,
+                 "mentalmanacontrol"        => Skills.mmc,
+                 "spiritualmanacontrol"     => Skills.smc,
+                 "elementalloreair"         => Skills.elair,
+                 "elementalloreearth"       => Skills.elearth,
+                 "elementallorefire"        => Skills.elfire,
+                 "elementallorewater"       => Skills.elwater,
+                 "spiritualloreblessings"   => Skills.slblessings,
+                 "spirituallorereligion"    => Skills.slreligion,
+                 "spiritualloresummoning"   => Skills.slsummoning,
+                 "sorcerousloredemonology"  => Skills.sldemonology,
+                 "sorcerouslorenecromancy"  => Skills.slnecromancy,
+                 "mentalloredivination"     => Skills.mldivination,
+                 "mentalloremanipulation"   => Skills.mlmanipulation,
+                 "mentalloretelepathy"      => Skills.mltelepathy,
+                 "mentalloretransference"   => Skills.mltransference,
+                 "mentalloretransformation" => Skills.mltransformation,
+                 "survival"                 => Skills.survival,
+                 "disarmingtraps"           => Skills.disarmingtraps,
+                 "pickinglocks"             => Skills.pickinglocks,
+                 "stalkingandhiding"        => Skills.stalkingandhiding,
+                 "perception"               => Skills.perception,
+                 "climbing"                 => Skills.climbing,
+                 "swimming"                 => Skills.swimming,
+                 "firstaid"                 => Skills.firstaid,
+                 "trading"                  => Skills.trading,
+                 "pickpocketing"            => Skills.pickpocketing};
+    end
+
+    def SpellRanks
+        return { "minorelemental" => Spells.minorelemental,
+                 "majorelemental" => Spells.majorelemental,
+                 "minorspiritual" => Spells.minorspiritual,
+                 "minorspirit"    => Spells.minorspirit,
+                 "majorspiritual" => Spells.majorspiritual,
+                 "majorspirit"    => Spells.majorspirit,
+                 "minormental"    => Spells.minormental,
+                 "wizard"         => Spells.wizard,
+                 "sorcerer"       => Spells.sorcerer,
+                 "ranger"         => Spells.ranger,
+                 "paladin"        => Spells.paladin,
+                 "empath"         => Spells.empath,
+                 "cleric"         => Spells.cleric,
+                 "bard"           => Spells.bard};
+    end
+
+    def Mana
+        return { "max"     => XMLData.max_mana,
+                 "current" => XMLData.mana }
+    end
+
+    def Health
+        return { "max"     => XMLData.max_health,
+                 "current" => XMLData.health }
+    end
+
+    def Spirit
+        return { "max"     => XMLData.max_spirit,
+                 "current" => XMLData.spirit }
+    end
+
+    def Stamina
+        return { "max"     => XMLData.max_stamina,
+                 "current" => XMLData.stamina }
+    end
+
+    def Encumbrance
+        return { "value" => XMLData.encumbrance_value,
+                 "text"  => XMLData.encumbrance_text };
+    end
+
+    def Status
+        return {
+                 # Health
+                 "poisoned"  => XMLData.indicator['IconPOISONED']   == 'y' ? 'y' : 'n',
+                 "diseased"  => XMLData.indicator['IconDISEASED']   == 'y' ? 'y' : 'n',
+                 "stunned"   => XMLData.indicator['IconSTUNNED']    == 'y' ? 'y' : 'n',
+                 "bleeding"  => XMLData.indicator['IconBLEEDING']   == 'y' ? 'y' : 'n',
+                 "staunched" => (Spell[9909].active? or Spell[9905].active?) ? 'y' : 'n',
+                 "dead"      => XMLData.indicator['IconDEAD']       == 'y' ? 'y' : 'n',
+
+                 # Webbed
+                 "webbed"    => XMLData.indicator['IconWEBBED']     == 'y' ? 'y' : 'n',
+
+                 # Other statuses
+                 "hidden"    => XMLData.indicator['IconHIDDEN']     == 'y' ? 'y' : 'n',
+                 "invisible" => XMLData.indicator['IconINVISIBLE']  == 'y' ? 'y' : 'n',
+                 "grouped"   => XMLData.indicator['IconJOINED']     == 'y' ? 'y' : 'n',
+
+                 # Included for lack of somewhere better for now.
+                 "mind"      => checkmind,
+                 "muckled"   => muckled?,
+                 "stance"    => XMLData.stance_value,
+                 "position"  => XMLData.indicator['IconSTANDING']   == 'y' ? "standing" :
+                                XMLData.indicator['IconSITTING']    == 'y' ? "sitting"  :
+                                XMLData.indicator['IconKNEELING']   == 'y' ? "kneeling" :
+                                XMLData.indicator['IconPRONE']      == 'y' ? "prone"    :
+                                                                             "unknown" };
+    end
+
+    def ScriptStart(script_name,cli_vars=[],flags=Hash.new)
+        start_script(script_name,cli_vars,flags)
+    end
+
+    def ScriptStop(*target_names)
+        stop_script(target_names)
+    end
+
+    def ScriptPause(*target_names)
+        pause_script(target_names)
+    end
+
+    def ScriptResume(*target_names)
+        unpause_script(target_names)
+    end
+
+    def Do(message, *waitingfor)
+        fput(message, waitingfor)
+    end
+
+    def Spell(id, target=nil)
+        fput "prepare id"
+        fput "cast #{target.nil? ? '' : target}"
+        #Spell[id].cast(target)
+    end
+
+end
+
+# -------------------------------------------------------------------------------------------------------
+# CLIENT CODE - This currently presumes local_lnet.rb was started in another process
+# -------------------------------------------------------------------------------------------------------
+
+# Start DRb and attach to our expected service
+DRb.start_service
+
+# Create an RemoteChar instance of ourself and add it to the server's group
+me = RemoteChar.new(Char)
+service = DRbObject.new_with_uri(SERVER_URI)
+service.add_character(me)
+
+# Join the DRb thread to keep the client running
+Thread.new { DRb.thread.join }
+
+# Always remove our hooks on exit
+before_dying {
+    UpstreamHook.remove('tell_uphook')
+    DRb.stop_service
+}
+
+# Procedure to pass command to a character. Implements the psuedo-character "all" to send
+# the same command to everyone (except ourself).
+remote_char_do = proc {|who,what|
+
+    if ( who.downcase == "all" )
+        service.characters.sort.each{ |name|
+            if name != Char.name.downcase # Don't give ourselves a remote command
+                respond "called for #{name} '#{what}'"
+                begin
+                    service.character_hash[name].commands = service.character_hash[name].commands.push(what)
+                rescue
+                    service.del_character(name)
+                end
+
+            end
+        }
+
+    elsif service.characters.include?(who.downcase)
+            respond "called for #{who} '#{what}'"
+            begin
+                service.character_hash[who.downcase].commands = service.character_hash[who.downcase].commands.push(what)
+            rescue
+                service.del_character(who.downcase)
+            end
+    else
+
+       respond "No one named #{who} exists to tell them to '#{what}'"
+    end
+}
+
+#
+# Add command hook ;tell <all|char> <commands>. This is the most basic command
+# possible
+#
+tell_uphook = proc { |client_string|
+    if client_string =~ /^(?:<c>)?#{$clean_lich_char}(?:tell\b\s*(.*)?)/i
+        params = $1.to_s
+
+        if scr = (Script.running + Script.hidden).find { |val| val.name.downcase == 'remoteable' }
+            params =~ (/^([A-Za-z0-9]+)\s+(.*)$/)
+            remote_char_do.call($1.to_s, $2.to_s)
+        end
+
+        nil
+    else
+        client_string
+    end
+}
+
+UpstreamHook.add('tell_uphook', tell_uphook)
+
+agree           = "nod"
+
+# Load character settings
+settings        = Lich.Remoteable.nil? ? "" : Lich.Remoteable
+agree           = $1 if Lich.Remoteable=~/agree=([^,]*)/
+
+# As long as we're running, do this.
+while ( true )
+
+    # For every command we've been given, do that command. Currently, wrap things
+    # in waitrt? just to be safe.
+    while ( (command = me.commands.pop)!=nil )
+
+        if command =~ /^;/
+            # Script to execute. Split it into <script> and <parameters>
+            # and invoke the script.
+            command.sub!(/^;/, "")
+            parameters = command.split(/\s+/)
+            waitrt?
+            if parameters.length > 1
+                start_script "#{parameters[0]}", [ parameters[1..-1] ]
+            else
+                start_script "#{parameters[0]}"
+            end
+            wait_while{running? "#{parameters[0]}"}
+            waitrt?
+
+        else
+            # Looks like a game command. Just issue it.
+            waitrt?
+            fput "#{command}"
+            waitrt?
+        end
+
+    end
+
+    pause 0.25
+
+end
