@@ -1,0 +1,137 @@
+=begin
+
+    Sell gems under a specific value to not waste time purifying them.
+
+    ;Purify --help
+
+     author: Jymamon (gs4-jymamon@hotmail.com)
+       game: Gemstone
+       tags: gems
+    version: 2015.05.16.01
+
+    history:
+        2015.05.16.01 Less noisy
+        2015.04.19.01 Created
+
+=end
+
+# -----------------------------------------------------------------------------
+# Require the helper library as I'm tired of C+P many of the same code blocks.
+# -----------------------------------------------------------------------------
+if File.file?("#{$script_dir}/cantrips.lic")
+    load("#{$script_dir}/cantrips.lic")
+else
+    echo "\n\ncantrips.lic is required: ';repos download cantrips.lic'\n\n"
+    exit
+end
+
+if ( $CantripsVer < "2015.03.29.01" )
+    Cantrips::Message.bold "-- Running with an untested version of cantrips.  This may not work."
+end
+
+
+class GemSeller
+    def initialize(value)
+        @value = value.to_i
+    end
+
+    def sell(gem, value)
+        if ( value.to_i < @value )
+            fput "sell ##{gem.id}"
+        end
+    end
+end
+
+
+class SellGemsUnder
+    # -----------------------------------------------------------------------------
+    # Option parsing/setup
+    # -----------------------------------------------------------------------------
+    require 'optparse'
+
+    Options = Struct.new(:lootsack,:value)
+
+    class Parser
+        def self.parse(options)
+            args = Options.new()
+
+            # defaults
+            args.value    = 3000
+            args.lootsack = Vars.lootsack
+
+            opt_parser = OptionParser.new { |opts|
+                opts.banner = "Usage: SellGemsUnder.lic [options]"
+
+                opts.on("-lLOOTSACK", "--lootsack=LOOTSACK", "Where to get gems. Defaults to Vars.lootsack.") { |parameter|
+                    args.lootsack = parameter
+                }
+
+                opts.on("-vVALUE", "--value=VALUE", "Value under which gems should be sold. Defaults to 3000.") { |parameter|
+                    args.value = parameter.to_i
+                }
+
+                opts.on("-h", "--help", "Prints this help") {
+                    echo opts.to_s
+                    exit
+                }
+            }
+
+            opt_parser.parse!(options)
+
+            # Hack-ish but sufficient for catching unused parameters
+            if ( options.any? )
+                opt_parser.parse("--help")
+            end
+
+            error = false
+
+            if ( args.lootsack.nil? )
+                echo "lootsack must be set in vars or passed as an option"
+                error = true
+            end
+
+            if error then exit end
+
+            # Tranlate to game objects
+            args.lootsack = Cantrips::Items.find(args.lootsack)
+
+            return args
+        end
+    end
+
+    def self.process_gems(container, handler)
+        Cantrips::Locations.go2('gemshop')
+        gems_with_values = Hash.new()
+        Cantrips::Containers.open(container.id)
+        gems = Cantrips::Containers.find_loot_by_pattern(Cantrips::Patterns.gems, container.id)
+
+        gems.each{ |gem|
+            fput "get ##{gem.id}"
+            line = fput "appraise ##{gem.id}"
+            line = waitfor("I'll give you", "what")
+            line =~ /I'll give you (\d+) for it/
+
+            if (! $1.nil?)
+                handler.sell(gem, $1)
+            end
+
+            if ( GameObj.right_hand.noun || GameObj.left_hand.noun )
+                fput "put ##{gem.id} in ##{container.id}"
+            end
+        }
+    end
+
+    def self.run(parameters)
+        options = Parser.parse(parameters)
+
+        seller = GemSeller.new(options.value.to_i)
+       
+        start_room = Room.current.id;
+        process_gems(options.lootsack, seller)
+
+        Cantrips::Containers.close(options.lootsack.id)
+        Cantrips::Locations.go2(start_room);
+    end
+end
+
+SellGemsUnder.run(script.vars)
