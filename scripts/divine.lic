@@ -1,0 +1,347 @@
+=begin
+
+    divine - Interpret various divination items.
+
+    author: Jymamon (gs4-jymamon@hotmail.com)
+    version: 2016.11.05.01
+
+    history:
+    - 2016.11.05.01 - Start adding gem pouch and scrying bowl
+    - 2016.11.04.01 - Translation of the SF script for Darlita's Tarot Decks
+                      from https://gswiki.play.net/Darlita%27s_Elanthian_Tarot_Deck_script
+=end
+
+silence_me
+
+def boldmsg(text)
+    stringArray = Array.new
+    stringArray = (text.gsub(/[\n]/, "o=\_=zz")).split(/o=\_=zz/)
+    preface_text = "<pushBold\/>"
+    end_text     = "<popBold\/>"
+
+    if $fake_stormfront
+        preface_text = "\034GSL\r\n "
+        end_text     = "\034GSM\r\n "
+    else
+        preface_text = "<pushBold\/>"
+        end_text     = "<popBold\/>"
+    end
+
+    stringArray.each { |line|
+        puts "#{preface_text}#{line.gsub('\n',' ')}#{end_text}"
+    }
+end
+
+bowl = "After a moment colors and shapes begin to coalesce into (?:a|an) (.*) vision of (.*)\."
+
+suits = {
+    "cup"  => "Elemental Water. Cards of the heart, emotions, and love.",
+    "gem"  => "Elemental Earth. Cards of wealth, gossip, earthly things, and material goods.",
+    "tart" => "Elemental Air. Cards of Intellect.",
+    "wand" => "Elemental Fire. Cards of energy, art, and creativity.",
+}
+
+cards = {
+    "a rainbow"     => "The Rainbow represents the messenger of the gods. Principle of Balance, Justice, and Realignment",
+    "a kobold"      => "Principal of Cowardice, Paranoia, Clumsiness",
+    "an elf"        => "Principal of personal power and leadership",
+    "a jester"      => "The Principle of Courage, State of no fear, Ecstacy and peak experience",
+    "a giant"       => "The principle of strength, passion and lustre",
+    "a skull"       => "The Principal of letting go and moving forward, release/detachment",
+    "a halfling"    => "The Principal of integration, synthesis, synergy",
+    "a tree"        => "The Principle of totality, individuation, wholeness",
+    "an orb"        => "Principal of good judgement, discernment",
+    "a coin"        => "The Principle of Opportunity, Breakthrough and Prosperity",
+    "a thief"       => "The Principle of Mirth/Humor at what 'bedevils' us",
+    "a ghost"       => "The Principal of intuition, self-trust. Self-resourcefulness.",
+    "a steed"       => "Principles of change, movement and the combination of stillness-activity",
+    "a skeleton"    => "The Principle of Surrender, breaking old patterns",
+    "a noble"       => "Principle of Learning and Teaching",
+    "a tower"       => "The Principle of restoration, Renovation and the De-structing of old forms",
+    "a hat"         => "The Principal of Communication and Timing",
+    "a teardrop"    => "Principal of love with wisdom, the Earth mother",
+    "a pauper"      => "The Principle of Completion, introspection and space",
+    "an eclipse"    => "Principal of Art and Craft of relationship, the journey of the twins",
+    "a star"        => "The Principle of Self-suffiency and talent recognized by others.",
+    "a moon"        => "The Principle of choice. Authenticity vs Dutifulness",
+    "a cloud"       => "Overshadowing, the hidden child. There but never seen. Insecurity and fear",
+    "a sun"         => "The Principle of Collaboration, Teamwork/partnership, co-operation",
+    "one cup"       => " beginning of new love or healing",
+    "two cups"      => "Lovers, Partners, true love for brothers and sisters, partnership, serious love",
+    "three cups"    => "Celebration, pleasure",
+    "four cups"     => "Apathy, discontent and flood of emotions, sometimes gossip",
+    "five cups"     => "Loss of love, or loss",
+    "six cups"      => "Kindness, new relationship, blessings on an old one",
+    "seven cups"    => "Hopes and dreams, delusions and fantasies",
+    "eight cups"    => "Change in situation or path or goal, abadonment of position",
+    "nine cups"     => "Lovemaking, love, success",
+    "ten cups"      => "Soul mates, truest love, completion of love, total success",
+    "one wand"      => "beginning of a new adventure",
+    "two wands"     => "friendship, partnership, business partners, allies",
+    "three wands"   => "offer of help, proprosals",
+    "four wands"    => "Celebration, romance, harvest, home",
+    "five wands"    => "Strife, conflict, struggle to defend, bickering",
+    "six wands"     => "Victory, success",
+    "seven wands"   => "Stress, strife, many suitors or competing issues",
+    "eight wands"   => "Speed, quick movement, moving, travel",
+    "nine wands"    => "Eventual victory, duty",
+    "ten wands"     => "Test by fire, pressure, caged,",
+    "one tart"      => "victory, new beginning after a clash of ideal",
+    "two tarts"     => "Peace, stalemate, crossed swords",
+    "three tarts"   => "Sorrow, civil strife, tears",
+    "four tarts"    => "Rest after war, peace after fighting",
+    "five tarts"    => "Cowardice, gossip, warning",
+    "siz tarts"     => "Things getting better, travel, escape",
+    "seven tarts"   => "Sneakiness, manipulations behind the scences, undercover",
+    "eight tarts"   => "Betrayal, feeling trapped, bound",
+    "nine tarts"    => "Great sorrow, tests and trials",
+    "ten tarts"     => "Disaster, death, overwhelming sorrow",
+    "one gem"       => "new financial deal or beginning",
+    "two gems"      => "Juggling two things at once, clash of opposing forces with good result",
+    "three gems"    => "Work, project, part time job, getting some money",
+    "four gems"     => "Power, greed, money, possession",
+    "five gems"     => "Loss, unemployment, money problems, destitution",
+    "six gems"      => "Charity, generosity",
+    "seven gems"    => "Ambiguous path, choosing between two different paths",
+    "eight gems"    => "Labor, craft, work, gifts",
+    "nine tems"     => "Wealth success to be comfortable but not overly wealthy",
+    "ten gems"      => "True wealth, family, love of family, inheritance",
+}
+
+patterns = {
+    "tap"   => "It is the card with (.*) on it\.",
+    "tilt"  => "You look at the card, nod, then reveal it as the card bearing (.*) upon it\.",
+    "touch" => "It is the card with the artwork of (.*) upon it\.",
+    "turn"  => "You flip the card up, revealing it as the one marked with (.*)\.  You nod",
+}
+
+pouch = "You draw your hand forth and reveal (.+)\.  You"
+
+stones = {
+    # These all come from the Aldoran rhyme: https://gswiki.play.net/A_Comprehensive_Guide_to_Divination_in_Elanthia_(saved_post)#Stone-tenders_of_Aldora
+    "a smooth amber nodule"               => "Amber in your pocket, you'll always come home-",
+    "a smooth moss agate nodule"          => "Agate in your pocket, and to Gosaena you'll roam.",
+    "a smooth alabaster nodule"           => "To cure your diseases always see alabaster -",
+    "a smooth amethyst sphere"            => "Give sobriety an amethyst to avoid disaster.",
+    "a smooth aquamarine cylinder"        => "Sympathy and trust go to the aquamarine -",
+    "a smooth aventurine pebble"          => "And prosperity and strength to aventurine.",
+    "a smooth Kezmonian honey beryl"      => "If beryl gives you weakness of spirit -",
+    "a smooth alexandrite disk"           => "Then alexandrite gives you the peace to bear it.",
+    "a smooth green-speckled bloodstone"  => "Bloodstone protects against all foul magic -",
+    "a smooth red carbuncle"              => "While carbuncle is purely necromantic.",
+    "an angular chalcedony"               => "Chalcedony is all about mercy and kindness -",
+    "a smooth chrysoberyl gem"            => "While chrysoberyl is the foul spirit that binds us.",
+    "a smooth green chrysoprase"          => "Chrysoprase will cure you of painful ailments-",
+    "a textured chunk of coral"           => "And coral will protect you from the elements.",
+    "a smooth cordierite nodule"          => "Cordierite is a weak-watered dish-",
+    "a slender opaque deathstone"         => "But deathstone is an ill-begotten wish.",
+    "a beveled despanal sliver"           => "Despanal will give you skill and power-",
+    "a smooth star-of-Tamzyrr diamond"    => "Yet, it's diamond that allows it to flower.",
+    "a smooth star diopside"              => "If demons you fear then of diopside beware- So too of black diopside for you'll despair.",
+    "a smooth blue dreamstone nodule"     => "Blue dreamstone makes an understanding wish-",
+    "a bright violet feystone"            => "And feystone speaks of only the foolish.",
+    "an angular emerald cube"             => "Emerald can offer you poison protection-",
+    "an irregular firestone nodule"       => "But firestone is disaster's prediction.",
+    "a deep red garnet pebble"            => "Dark garnet is the tool of deep passions-",
+    "a rough blue geode chip"             => "While blue geode is an empathic distraction.",
+    "a smooth peach glimaerstone"         => "If mental prowess you seek, then try glimaerstone-",
+    "a smooth heliodor nodule"            => "Find heliodor to gain control of your own.",
+    "a smooth brown jade pebble"          => "Brown jade gives you the Arkati's blessings-",
+    "a smooth black jasper"               => "But black jasper is an unreliable assessing.",
+    "a slender jet cylinder"              => "A gift of jet is a blessing of shadow's dance-",
+    "an iridescent labradorite stone"     => "And labradorite is protection from chance.",
+    "a lapis lazuli sliver"               => "Lapis lazuli reduces fever or body ache-",
+    "a banded malachite pebble"           => "But always use malachite when forgiveness is at stake.",
+    "a miniature mermaid's-tear sapphire" => "In sapphire you'll find Niima's graceful elation-",
+    "smooth moonstone crescent"           => "And in moonstone a hidden secret spells revelation.",
+    "a pale pink morganite pebble"        => "Morganite means a child is harmed-",
+    "a splintered obsidian nodule"        => "But in obsidian with Onar you are armed.",
+    "a small opal nodule"                 => "Opal screams madness, and pyrite claims false-",
+    "a rough cube of pyrite"              => "Opal screams madness, and pyrite claims false-",
+    "a smoky quartz pebble"               => "Quartz begs you to the shadows a-waltz.",
+    "a spherical black pearl"             => "Use a black pearl to dispel sardonyx's troubled spirits.",
+    "a banded sardonyx stone"             => "Use a black pearl to dispel sardonyx's troubled spirits.",
+    "a light blue peridot nodule"         => "And blue peridot absorbs anything near it.",
+    "a rhodochrosite stone"               => "Summon strength in rhodochrosite-",
+    "a smooth ruby cube"                  => "And a ruby means your heart is in sight.",
+    "a rough umber sard"                  => "A sard gives a false sense of security-",
+    "an irregular shimmertine shard"      => "While shimmertine speaks of your fragility.",
+    "a smooth sapphire pebble"            => "Tiny sapphire eases a lonesome mind-",
+    "a violet spinel nodule"              => "And violet spinel will heal it in kind.",
+    "a faceted tigerfang crystal"         => "Tigerfang speaks of transformation-",
+    "a smooth white starstone"            => "And white starstone of divination.",
+    "a slender sunstone pebble"           => "Sunstone is strength, but topaz is cautious.",
+    "a thin topaz cube"                   => "Sunstone is strength, but topaz is cautious.",
+    "a smooth clear tourmaline nodule"    => "And pale tourmaline which makes you nauseous.",
+    # Based on the sign in Stone-tender's Cottage at EG 2007
+    "a faceted deep red bloodjewel"       => "Cures Poison",
+    "a thin turquoise shard"              => "Cures Poison",
+    # Based on play.net website lore
+    "an irregular rock crystal nodule"    => " good for clearing an addled mind, removing diseases from the blood, and protecting against poisons",
+    "a smooth azure blazestar"            => "Elemental air",
+    "a smooth crimson blazestar"          => "Elemental fire",
+    "a smooth golden blazestar"           => "Elemental earth",
+    "a smooth green blazestar"            => "Elemental water",
+    "a rough brown zircon chip"           => "Brown zircons respond best to spells of transference",
+    "a rough clear zircon chip"           => "Clear zircons respond best to spells of divination. Also said to protect against sunstroke.",
+    "a rough yellow zircon chip"          => "Yellow zircons respond best to spells of manipulation. a traveler's boon, and gnomish tradition holds that any traveler who offers a yellow zircon as a gift cannot be turned away from food and shelter.",
+    "a smooth black dreamstone"           => "Dreamstones are remarkably suited to enhancing latent telepathy and telepathic spellcasting.",
+}
+
+visions = {
+    # I completely made these up.
+    "a band of thugs waiting in ambush"            => "pending danger",
+    "a bard playing a lute"                        => "(to do)",
+    "a black knight"                               => "the unknown",
+    "a black panther stalking its prey"            => "(to do)",
+    "a candle burning in a window"                 => "hope",
+    "a child caring for an elder"                  => "(to do)",
+    "a cleric praying at an altar"                 => "(to do)",
+    "a cozy cottage"                               => "home",
+    "a dark and forbidding forest"                 => "(to do)",
+    "a dark tower perched on a rocky peak"         => "forbidden knowledge",
+    "a dark tunnel"                                => "(to do)",
+    "a doe and her fawn in a meadow of tall grass" => "(to do)",
+    "a farmer plowing a field"                     => "(to do)",
+    "a great eagle soaring in a cloudless sky"     => "(to do)",
+    "a harvest festival"                           => "(to do)",
+    "a hot forge"                                  => "(to do)",
+    "a lone figure placing flowers on a grave"     => "(to do)",
+    "a lone figure walking down a narrow trail"    => "(to do)",
+    "a mage hovering over a simmering cauldron"    => "craftsmanship",
+    "a malevolent wraith"                          => "(to do)",
+    "a man dressed in black"                       => "(to do)",
+    "a man hanging from a noose"                   => "(to do)",
+    "a monk meditating"                            => "(to do)",
+    "a mother nursing her child"                   => "(to do)",
+    "a mountain meadow in bloom"                   => "(to do)",
+    "a nugget of gold"                             => "found wealth",
+    "a pebble dropping into a still pond"          => "(to do)",
+    "a raging forest fire"                         => "(to do)",
+    "a rainbow"                                    => "respite after trouble",
+    "a raven perched on a dead tree"               => "(to do)",
+    "a red moon in a dark sky"                     => "(to do)",
+    "a ruined keep"                                => "lost power",
+    "a sad figure sitting by a campfire at night"  => "(to do)",
+    "a scholar reading in a library"               => "knowledge",
+    "a shining knight"                             => "good",
+    "a ship tossed on a stormy sea"                => "dangerous travel",
+    "a silver moon in a dark sky"                  => "rest",
+    "a small village at twilight"                  => "(to do)",
+    "a snowy forest at dusk"                       => "(to do)",
+    "a street urchin stealing a noble's purse"     => "(to do)",
+    "a sunrise"                                    => "new beginnings",
+    "a sunset"                                     => "sucessful resolution",
+    "a violent thunderstorm"                       => "natural fury",
+    "a weaving loom"                               => "creativity",
+    "a winding path through the woods"             => "famaliar travel",
+    "a wolf howling at two moons"                  => "(to do)",
+    "a woman dressed in black"                     => "(to do)",
+    "an abandoned mansion"                         => "lost wealth",
+    "an ancient city in ruins"                     => "lost knowledge",
+    "an archer"                                    => "(to do)",
+    "an old collapsed mine"                        => "dangerous pursuit of wealth",
+    "an old graveyard"                             => "(to do)",
+    "an old woman scrying"                         => "diviniation",
+    "an owl"                                       => "wisdom",
+    "children playing"                             => "innocent happiness",
+    "colorful autumn leaves"                       => "(to do)",
+    "spring festival dancers"                      => "(to do)",
+    "two lovers embracing"                         => "love",
+    "windswept sand dunes"                         => "distant travel",
+}
+
+visionstrength = {
+    # Order strength is my own interpretation.
+    "vague"       => " 1/38",
+    "confusing"   => " 2/38",
+    "dim"         => " 3/38",
+    "faint"       => " 4/38",
+    "murky"       => " 5/38",
+    "muddled"     => " 6/38",
+    "diffuse"     => " 7/38",
+    "veiled"      => " 8/38",
+    "fog-shrouded"=> " 9/38",
+    "shadowy"     => "10/38",
+    "ethereal"    => "11/38",
+    "misty"       => "12/38",
+    "hazy"        => "13/38",
+    "weak"        => "14/38",
+    "ambiguous"   => "15/38",
+    "jumbled"     => "16/38",
+    "indistinct"  => "17/38",
+    "elusive"     => "18/38",
+    "indefinite"  => "19/38",
+    "imprecise"   => "20/38",
+    "obscure"     => "21/38",
+    "uncertain"   => "22/38",
+    "eerie"       => "23/38",
+    "obvious"     => "24/38",
+    "definite"    => "25/38",
+    "distinct"    => "26/38",
+    "clear"       => "27/38",
+    "bright"      => "28/38",
+    "riveting"    => "29/38",
+    "striking"    => "30/38",
+    "enthralling" => "31/38",
+    "fascinating" => "32/38",
+    "gripping"    => "33/38",
+    "detailed"    => "34/38",
+    "mesmerizing" => "35/38",
+    "powerful"    => "36/38",
+    "remarkable"  => "37/38",
+    "vivid"       => "38/38",
+}
+
+if ( script.vars[1].downcase =~ /help/ )
+    respond "#{script.name} [(tap|tilt|touch|turn)]\n" +
+            "  Selects a card from the tarot deck in your hand and displays\n"
+            "  the meaning of the card.  If a specific verb trap is provided\n"
+            "  that is the verb which will be used on the carsd. Otherwise,\n"
+            "  one of the verbs will be selected at random.\n"
+
+elsif ( GameObj.right_hand.noun == "bowl" || GameObj.left_hand.noun == "bowl")
+    result = dothistimeout("gaze my bowl", 3, /#{bowl}/);
+
+    if (result =~ /#{bowl}/)
+        strength = $1
+        vision   = $2
+
+        boldmsg("A #{strength} vision: Strength: #{visionstrength[strength]}")
+        boldmsg("A vision of #{vision}: #{visions[vision]}")
+    else
+        boldmsg("I don't know anything about that vision!")
+    end
+
+elsif ( script.vars[1].downcase =~ /pouch/ || GameObj.right_hand.noun == "pouch" || GameObj.left_hand.noun == "pouch")
+    result = dothistimeout("rummage my pouch", 3, /#{pouch}/);
+
+    if (result =~ /#{pouch}/)
+        stone = $1
+
+        boldmsg("#{stone} : #{stones[stone]}\n.\n\n")
+    else
+        boldmsg("I don't know anything about that stone!")
+    end
+
+elsif ( GameObj.right_hand.noun == "cards" || GameObj.left_hand.noun == "cards" )
+    verb = script.vars[1].downcase || patterns.keys.sample(1).first
+
+    result = dothistimeout("#{verb} my cards", 3, /#{patterns[verb]}/);
+
+    if (result =~ /#{patterns[verb]}/)
+        card = $1
+
+        if ( card =~ /(gem|tart|wand|cup)s?/ )
+            suit = $1
+            boldmsg("Suit of #{suit}s - #{suits[suit]}")
+        end
+
+        boldmsg("#{card} : #{cards[card]}\n.\n\n")
+    else
+        boldmsg("I don't know anything about that card!")
+    end
+
+else
+    boldmsg("\nYou need to have a divination tool in your hand!\n\n");
+end
