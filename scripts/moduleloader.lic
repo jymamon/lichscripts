@@ -1,0 +1,41 @@
+=begin
+    moduleloader - helper to load support scripts of a specific version or higher
+
+    author: Jymamon (gs4-jymamon@hotmail.com)
+       game: Gemstone
+       tags: utility
+    version: 2016.12.31.01
+       repo: https://github.com/jymamon/lichscripts
+    
+    history:
+        2016.12.31.01 - Created to remove duplication from other scripts
+=end
+
+module ModuleLoader
+    # My own little standard. Don't expect this to work in general. Casing on modulename
+    # must match casing used for module declaration.
+    def self.get_module_version(modulename)
+        # eval isn't a great choice here, but I see no equivalent for instance_variable_get
+        # for a global and this is the best I've been able to determine
+        eval "#{modulename}.version"
+    end
+
+    def ModuleLoader.load_support_script(modulename, version_required=nil)
+        # TODO: Auto-update modules.
+        if File.file?("#{$script_dir}/#{modulename}.lic")
+            load("#{$script_dir}/#{modulename}.lic")
+        else
+            echo "\n\n#{modulename}.lic #{version_required.nil? ? '':'version #{version_required} '}or higher is required: ';repos download #{modulename}.lic'\n\n."
+            exit
+        end
+
+        if (!version_required.nil?)
+            version_is = get_module_version("#{modulename}")
+
+            if ( version_is.nil? || version_is < version_required )
+                echo "-- #{modulename} version #{version_is} is too old. Version #{version_required} or new requred. ';repos update #{modulename}.lic' and try again."
+                exit
+            end
+        end
+    end
+end

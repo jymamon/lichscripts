@@ -1,0 +1,1945 @@
+=begin
+    Initializes the creatures database.
+
+     author: Jymamon (gs4-jymamon@hotmail.com)
+       game: Gemstone
+       tags: creatures
+    version: 2016.10.18.01
+=end
+
+# -----------------------------------------------------------------------------
+# Require the helper libraries as I'm tired of C+P many of the same code blocks.
+# -----------------------------------------------------------------------------
+if File.file?("#{$script_dir}/moduleloader.lic")
+    load("#{$script_dir}/moduleloader.lic")
+else
+    echo "\n\nmoduleloader.lic is required:\n;repos download moduleloader.lic;repos moduleloader.lic\n\n."
+    exit
+end
+
+ModuleLoader.load_support_script("AtlasDatabase", "2016.12.31.01")
+
+creatures_to_add_or_update = [
+    { :id => 1  , :name => 'black rolton'                  , :level => 1  , :undead => false, :noncorp => false, :hated => false, :skin => 'rolton ear' },
+    { :id => 2  , :name => 'black-winged daggerbeak'       , :level => 1  , :undead => false, :noncorp => false, :hated => false, :skin => 'daggerbeak wing' },
+    { :id => 3  , :name => 'carrion worm'                  , :level => 1  , :undead => false, :noncorp => false, :hated => false, :skin => 'worm skin' },
+    { :id => 4  , :name => 'fanged rodent'                 , :level => 1  , :undead => false, :noncorp => false, :hated => false, :skin => 'rodent fang' },
+    { :id => 5  , :name => 'fire ant'                      , :level => 1  , :undead => false, :noncorp => false, :hated => false, :skin => 'fire ant pincer' },
+    { :id => 6  , :name => 'giant ant'                     , :level => 1  , :undead => false, :noncorp => false, :hated => false, :skin => 'ant pincer' },
+    { :id => 7  , :name => 'giant rat'                     , :level => 1  , :undead => false, :noncorp => false, :hated => false, :skin => 'rat pelt' },
+    { :id => 8  , :name => 'kobold'                        , :level => 1  , :undead => false, :noncorp => false, :hated => false, :skin => 'kobold skin' },
+    { :id => 9  , :name => 'lesser ghoul'                  , :level => 1  , :undead => true , :noncorp => false, :hated => false, :skin => 'ghoul nail' },
+    { :id => 10 , :name => 'mountain rolton'               , :level => 1  , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 11 , :name => 'rolton'                        , :level => 1  , :undead => false, :noncorp => false, :hated => false, :skin => 'rolton pelt' },
+    { :id => 12 , :name => 'skeleton'                      , :level => 1  , :undead => true , :noncorp => false, :hated => false, :skin => 'skeleton bone' },
+    { :id => 13 , :name => 'slimy little grub'             , :level => 1  , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 14 , :name => 'spotted gnarp'                 , :level => 1  , :undead => false, :noncorp => false, :hated => false, :skin => 'spotted gnarp horn' },
+    { :id => 15 , :name => 'young grass snake'             , :level => 1  , :undead => false, :noncorp => false, :hated => false, :skin => 'snake skin' },
+    { :id => 16 , :name => 'zombie rolton'                 , :level => 1  , :undead => true , :noncorp => false, :hated => false, :skin => 'rotting rolton pelt' },
+    { :id => 17 , :name => 'big ugly kobold'               , :level => 2  , :undead => false, :noncorp => false, :hated => false, :skin => 'kobold skin' },
+    { :id => 18 , :name => 'brown gak'                     , :level => 2  , :undead => false, :noncorp => false, :hated => false, :skin => 'brown gak hide' },
+    { :id => 19 , :name => 'cave gnome'                    , :level => 2  , :undead => false, :noncorp => false, :hated => true , :skin => 'gnome scalp' },
+    { :id => 20 , :name => 'fanged goblin'                 , :level => 2  , :undead => false, :noncorp => false, :hated => false, :skin => 'goblin fang' },
+    { :id => 21 , :name => 'ghost'                         , :level => 2  , :undead => false, :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id => 22 , :name => 'goblin'                        , :level => 2  , :undead => false, :noncorp => false, :hated => false, :skin => 'goblin skin' },
+    { :id => 23 , :name => 'lesser frost shade'            , :level => 2  , :undead => true , :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id => 24 , :name => 'lesser shade'                  , :level => 2  , :undead => false, :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id => 25 , :name => 'Mistydeep siren'               , :level => 2  , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 26 , :name => 'moaning phantom'               , :level => 2  , :undead => true , :noncorp => true,  :hated => false, :skin => 'UNKNOWN' },
+    { :id => 27 , :name => 'pale crab'                     , :level => 2  , :undead => false, :noncorp => false, :hated => false, :skin => 'pale crab pincer' },
+    { :id => 28 , :name => 'phantom'                       , :level => 2  , :undead => true , :noncorp => true,  :hated => false, :skin => 'UNKNOWN' },
+    { :id => 29 , :name => 'rabid squirrel'                , :level => 2  , :undead => false, :noncorp => false, :hated => false, :skin => 'squirrel tail' },
+    { :id => 30 , :name => 'sea nymph'                     , :level => 2  , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 31 , :name => 'spotted gak'                   , :level => 2  , :undead => false, :noncorp => false, :hated => false, :skin => 'gak hide' },
+    { :id => 32 , :name => 'thyril'                        , :level => 2  , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 33 , :name => 'Bresnahanini rolton'           , :level => 3  , :undead => false, :noncorp => false, :hated => false, :skin => 'rolton horn' },
+    { :id => 34 , :name => 'cave gnoll'                    , :level => 3  , :undead => false, :noncorp => false, :hated => true , :skin => 'none' },
+    { :id => 35 , :name => 'cave nipper'                   , :level => 3  , :undead => false, :noncorp => false, :hated => false, :skin => 'cave nipper skin' },
+    { :id => 36 , :name => 'dark vysan'                    , :level => 3  , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 37 , :name => 'fire salamander'               , :level => 3  , :undead => false, :noncorp => false, :hated => false, :skin => 'salamander skin' },
+    { :id => 38 , :name => 'greater ghoul'                 , :level => 3  , :undead => true , :noncorp => false, :hated => false, :skin => 'ghoul scraping' },
+    { :id => 39 , :name => 'greater ice spider'            , :level => 3  , :undead => false, :noncorp => false, :hated => false, :skin => 'spider leg' },
+    { :id => 40 , :name => 'hobgoblin'                     , :level => 3  , :undead => false, :noncorp => false, :hated => false, :skin => 'hobgoblin scalp' },
+    { :id => 41 , :name => 'ice skeleton'                  , :level => 3  , :undead => true , :noncorp => false, :hated => false, :skin => 'skeleton skull' },
+    { :id => 42 , :name => 'kobold shepherd'               , :level => 3  , :undead => false, :noncorp => false, :hated => false, :skin => 'kobold ear' },
+    { :id => 43 , :name => 'mountain snowcat'              , :level => 3  , :undead => false, :noncorp => false, :hated => false, :skin => 'snowcat pelt' },
+    { :id => 44 , :name => 'relnak'                        , :level => 3  , :undead => false, :noncorp => false, :hated => false, :skin => 'relnak sail' },
+    { :id => 45 , :name => 'spotted velnalin'              , :level => 3  , :undead => false, :noncorp => false, :hated => false, :skin => 'velnalin horn' },
+    { :id => 46 , :name => 'striped gak'                   , :level => 3  , :undead => false, :noncorp => false, :hated => false, :skin => 'gak pelt' },
+    { :id => 47 , :name => 'striped relnak'                , :level => 3  , :undead => false, :noncorp => false, :hated => false, :skin => 'striped relnak sail' },
+    { :id => 48 , :name => 'troglodyte'                    , :level => 3  , :undead => false, :noncorp => false, :hated => true , :skin => 'none' },
+    { :id => 49 , :name => 'velnalin'                      , :level => 3  , :undead => false, :noncorp => false, :hated => false, :skin => 'velnalin hide' },
+    { :id => 50 , :name => 'white vysan'                   , :level => 3  , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 51 , :name => 'black urgh'                    , :level => 4  , :undead => false, :noncorp => false, :hated => false, :skin => 'black urgh hide' },
+    { :id => 52 , :name => 'cobra'                         , :level => 4  , :undead => false, :noncorp => false, :hated => false, :skin => 'cobra skin' },
+    { :id => 53 , :name => 'fanged viper'                  , :level => 4  , :undead => false, :noncorp => false, :hated => false, :skin => 'viper skin' },
+    { :id => 54 , :name => 'mongrel kobold'                , :level => 4  , :undead => false, :noncorp => false, :hated => false, :skin => 'mangy kobold scalp' },
+    { :id => 55 , :name => 'revenant'                      , :level => 4  , :undead => true , :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id => 56 , :name => 'ridge orc'                     , :level => 4  , :undead => false, :noncorp => false, :hated => true , :skin => 'UNKNOWN' },
+    { :id => 57 , :name => 'spotted leaper'                , :level => 4  , :undead => false, :noncorp => false, :hated => false, :skin => 'spotted leaper pelt' },
+    { :id => 58 , :name => 'urgh'                          , :level => 4  , :undead => false, :noncorp => false, :hated => false, :skin => 'urgh hide' },
+    { :id => 59 , :name => 'water moccasin'                , :level => 4  , :undead => false, :noncorp => false, :hated => false, :skin => 'water moccasin skin' },
+    { :id => 60 , :name => 'whiptail'                      , :level => 4  , :undead => false, :noncorp => false, :hated => false, :skin => 'whiptail stinger' },
+    { :id => 61 , :name => 'bobcat'                        , :level => 5  , :undead => false, :noncorp => false, :hated => false, :skin => 'bobcat claw' },
+    { :id => 62 , :name => 'coyote'                        , :level => 5  , :undead => false, :noncorp => false, :hated => false, :skin => 'coyote tail' },
+    { :id => 63 , :name => 'dark apparition'               , :level => 5  , :undead => true , :noncorp => true,  :hated => false, :skin => 'UNKNOWN' },
+    { :id => 64 , :name => 'mist wraith'                   , :level => 5  , :undead => true , :noncorp => true,  :hated => false, :skin => 'mist wraith eye' },
+    { :id => 65 , :name => 'mongrel hobgoblin'             , :level => 5  , :undead => false, :noncorp => false, :hated => false, :skin => 'mongrel hobgoblin snout' },
+    { :id => 66 , :name => 'nasty little gremlin'          , :level => 5  , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 67 , :name => 'night golem'                   , :level => 5  , :undead => false, :noncorp => false, :hated => false, :skin => 'night golem finger' },
+    { :id => 68 , :name => 'water witch'                   , :level => 5  , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 69 , :name => 'cockatrice'                    , :level => 6  , :undead => false, :noncorp => false, :hated => false, :skin => 'cockatrice feather' },
+    { :id => 70 , :name => 'firephantom'                   , :level => 6  , :undead => true , :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id => 71 , :name => 'leaper'                        , :level => 6  , :undead => false, :noncorp => false, :hated => false, :skin => 'leaper hide' },
+    { :id => 72 , :name => 'lesser mummy'                  , :level => 6  , :undead => true , :noncorp => false, :hated => false, :skin => 'mummy\'s shroud' },
+    { :id => 73 , :name => 'lesser orc'                    , :level => 6  , :undead => false, :noncorp => false, :hated => true , :skin => 'orc hide' },
+    { :id => 74 , :name => 'monkey'                        , :level => 6  , :undead => false, :noncorp => false, :hated => false, :skin => 'monkey paw' },
+    { :id => 75 , :name => 'snowy cockatrice'              , :level => 6  , :undead => false, :noncorp => false, :hated => false, :skin => 'snowy cockatrice tailfeather' },
+    { :id => 76 , :name => 'spectral fisherman'            , :level => 6  , :undead => true , :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id => 77 , :name => 'spotted lynx'                  , :level => 6  , :undead => false, :noncorp => false, :hated => false, :skin => 'lynx pelt' },
+    { :id => 78 , :name => 'blood eagle'                   , :level => 7  , :undead => false, :noncorp => false, :hated => false, :skin => 'blood red eagle feather' },
+    { :id => 79 , :name => 'greater kappa'                 , :level => 7  , :undead => false, :noncorp => false, :hated => false, :skin => 'kappa fin' },
+    { :id => 80 , :name => 'hobgoblin shaman'              , :level => 7  , :undead => false, :noncorp => false, :hated => false, :skin => 'hobgoblin shaman ear' },
+    { :id => 81 , :name => 'lesser burrow orc'             , :level => 7  , :undead => false, :noncorp => false, :hated => true , :skin => 'orc claw' },
+    { :id => 82 , :name => 'lesser red orc'                , :level => 7  , :undead => false, :noncorp => false, :hated => true , :skin => 'red orc scalp' },
+    { :id => 83 , :name => 'shelfae soldier'               , :level => 7  , :undead => false, :noncorp => false, :hated => false, :skin => 'shelfae scale' },
+    { :id => 84 , :name => 'albino tomb spider'            , :level => 8  , :undead => false, :noncorp => false, :hated => false, :skin => 'multi-faceted tomb spider eye' },
+    { :id => 85 , :name => 'bone golem'                    , :level => 8  , :undead => true , :noncorp => false, :hated => false, :skin => 'golem bone' },
+    { :id => 86 , :name => 'crystal crab'                  , :level => 8  , :undead => false, :noncorp => false, :hated => false, :skin => 'faceted crystal crab shell' },
+    { :id => 87 , :name => 'greater burrow orc'            , :level => 8  , :undead => false, :noncorp => false, :hated => true , :skin => 'orc claw' },
+    { :id => 88 , :name => 'greater orc'                   , :level => 8  , :undead => false, :noncorp => false, :hated => true , :skin => 'orc scalp' },
+    { :id => 89 , :name => 'greater spider'                , :level => 8  , :undead => false, :noncorp => false, :hated => false, :skin => 'spider leg' },
+    { :id => 90 , :name => 'mottled thrak'                 , :level => 8  , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 91 , :name => 'thrak'                         , :level => 8  , :undead => false, :noncorp => false, :hated => false, :skin => 'thrak hide' },
+    { :id => 92 , :name => 'brown spinner'                 , :level => 9  , :undead => false, :noncorp => false, :hated => false, :skin => 'brown spinner leg' },
+    { :id => 93 , :name => 'crocodile'                     , :level => 9  , :undead => false, :noncorp => false, :hated => false, :skin => 'crocodile snout' },
+    { :id => 94 , :name => 'death dirge'                   , :level => 9  , :undead => true , :noncorp => true,  :hated => false, :skin => 'dirge skin' },
+    { :id => 95 , :name => 'manticore'                     , :level => 9  , :undead => false, :noncorp => false, :hated => false, :skin => 'manticore tail' },
+    { :id => 96 , :name => 'snow spectre'                  , :level => 9  , :undead => true , :noncorp => true,  :hated => false, :skin => 'UNKNOWN' },
+    { :id => 97 , :name => 'cave worm'                     , :level => 10 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 98 , :name => 'giant marmot'                  , :level => 10 , :undead => false, :noncorp => false, :hated => false, :skin => 'marmot pelt' },
+    { :id => 99 , :name => 'gnoll worker'                  , :level => 10 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 100, :name => 'great boar'                    , :level => 10 , :undead => false, :noncorp => false, :hated => false, :skin => 'boar tusk' },
+    { :id => 101, :name => 'rabid guard dog'               , :level => 10 , :undead => false, :noncorp => false, :hated => false, :skin => 'rotted canine' },
+    { :id => 102, :name => 'raider orc'                    , :level => 10 , :undead => false, :noncorp => false, :hated => true , :skin => 'UNKNOWN' },
+    { :id => 103, :name => 'werebear'                      , :level => 10 , :undead => true , :noncorp => false, :hated => false, :skin => 'werebear paw' },
+    { :id => 104, :name => 'Neartofar orc'                 , :level => 11 , :undead => false, :noncorp => false, :hated => true , :skin => 'orc knuckle' },
+    { :id => 105, :name => 'shelfae chieftain'             , :level => 11 , :undead => false, :noncorp => false, :hated => false, :skin => 'shelfae crest' },
+    { :id => 106, :name => 'wall guardian'                 , :level => 11 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 107, :name => 'crystal golem'                 , :level => 12 , :undead => false, :noncorp => false, :hated => true , :skin => 'none' },
+    { :id => 108, :name => 'dark orc'                      , :level => 12 , :undead => false, :noncorp => false, :hated => true , :skin => 'orc ear' },
+    { :id => 109, :name => 'darkwoode'                     , :level => 13 , :undead => true , :noncorp => true,  :hated => false, :skin => 'UNKNOWN' },
+    { :id => 110, :name => 'deranged sentry'               , :level => 13 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 111, :name => 'gnoll thief'                   , :level => 13 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 112, :name => 'great stag'                    , :level => 13 , :undead => false, :noncorp => false, :hated => false, :skin => '.* antlers' },
+    { :id => 113, :name => 'plumed cockatrice'             , :level => 13 , :undead => false, :noncorp => false, :hated => false, :skin => 'cockatrice plume' },
+    { :id => 114, :name => 'tawny brindlecat'              , :level => 13 , :undead => false, :noncorp => false, :hated => false, :skin => 'tawny brindlecat hide' },
+    { :id => 115, :name => 'agresh troll scout'            , :level => 14 , :undead => false, :noncorp => false, :hated => true , :skin => 'UNKNOWN' },
+    { :id => 116, :name => 'black boar'                    , :level => 14 , :undead => false, :noncorp => false, :hated => false, :skin => 'black boar hide' },
+    { :id => 117, :name => 'brown boar'                    , :level => 14 , :undead => false, :noncorp => false, :hated => false, :skin => 'brown boar skin' },
+    { :id => 118, :name => 'forest troll'                  , :level => 14 , :undead => false, :noncorp => false, :hated => true , :skin => 'troll hide' },
+    { :id => 119, :name => 'giant weasel'                  , :level => 14 , :undead => false, :noncorp => false, :hated => false, :skin => 'weasel pelt' },
+    { :id => 120, :name => 'great brown bear'              , :level => 14 , :undead => false, :noncorp => false, :hated => false, :skin => 'brown bear skin' },
+    { :id => 121, :name => 'grey orc'                      , :level => 14 , :undead => false, :noncorp => false, :hated => true , :skin => 'orc beard' },
+    { :id => 122, :name => 'shadowy spectre'               , :level => 14 , :undead => true , :noncorp => true,  :hated => false, :skin => 'UNKNOWN' },
+    { :id => 123, :name => 'silverback orc'                , :level => 14 , :undead => false, :noncorp => false, :hated => true , :skin => 'silverback orc knuckle' },
+    { :id => 124, :name => 'spectre'                       , :level => 14 , :undead => true , :noncorp => true,  :hated => false, :skin => 'spectre skin' },
+    { :id => 125, :name => 'swamp troll'                   , :level => 14 , :undead => false, :noncorp => false, :hated => true , :skin => 'swamp troll scalp' },
+    { :id => 126, :name => 'arctic puma'                   , :level => 15 , :undead => false, :noncorp => false, :hated => false, :skin => 'white puma hide' },
+    { :id => 127, :name => 'black leopard'                 , :level => 15 , :undead => false, :noncorp => false, :hated => false, :skin => 'black leopard paw' },
+    { :id => 128, :name => 'gnoll ranger'                  , :level => 15 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 129, :name => 'humpbacked puma'               , :level => 15 , :undead => false, :noncorp => false, :hated => false, :skin => 'puma paw' },
+    { :id => 130, :name => 'large ogre'                    , :level => 15 , :undead => false, :noncorp => false, :hated => true , :skin => 'ogre tusk' },
+    { :id => 131, :name => 'luminescent arachnid'          , :level => 15 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 132, :name => 'neartofar troll'               , :level => 15 , :undead => false, :noncorp => false, :hated => true , :skin => 'greasy troll scalp' },
+    { :id => 133, :name => 'panther'                       , :level => 15 , :undead => false, :noncorp => false, :hated => false, :skin => 'panther pelt' },
+    { :id => 134, :name => 'puma'                          , :level => 15 , :undead => false, :noncorp => false, :hated => false, :skin => 'puma hide' },
+    { :id => 135, :name => 'ridgeback boar'                , :level => 15 , :undead => false, :noncorp => false, :hated => false, :skin => 'yellowed boar tusk' },
+    { :id => 136, :name => 'tomb wight'                    , :level => 15 , :undead => true , :noncorp => false, :hated => false, :skin => 'wight claw' },
+    { :id => 137, :name => 'wolfshade'                     , :level => 15 , :undead => true , :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id => 138, :name => 'wraith'                        , :level => 15 , :undead => true , :noncorp => true,  :hated => false, :skin => 'wraith talon' },
+    { :id => 139, :name => 'agresh bear'                   , :level => 16 , :undead => false, :noncorp => false, :hated => false, :skin => 'agresh bear claw' },
+    { :id => 140, :name => 'agresh troll warrior'          , :level => 16 , :undead => false, :noncorp => false, :hated => true , :skin => 'UNKNOWN' },
+    { :id => 141, :name => 'banded rattlesnake'            , :level => 16 , :undead => false, :noncorp => false, :hated => false, :skin => '.* rattlesnake rattle ' },
+    { :id => 142, :name => 'black bear'                    , :level => 16 , :undead => false, :noncorp => false, :hated => false, :skin => 'bear hide' },
+    { :id => 143, :name => 'cave troll'                    , :level => 16 , :undead => false, :noncorp => false, :hated => true , :skin => 'troll skin' },
+    { :id => 144, :name => 'fire guardian'                 , :level => 16 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 145, :name => 'fire rat'                      , :level => 16 , :undead => false, :noncorp => false, :hated => false, :skin => 'fire rat tail' },
+    { :id => 146, :name => 'ghost wolf'                    , :level => 16 , :undead => true , :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id => 147, :name => 'ghoul master'                  , :level => 16 , :undead => true , :noncorp => false, :hated => false, :skin => 'ghoul finger' },
+    { :id => 148, :name => 'hill troll'                    , :level => 16 , :undead => false, :noncorp => false, :hated => false, :skin => 'troll beard' },
+    { :id => 149, :name => 'mongrel troll'                 , :level => 16 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 150, :name => 'mongrel wolfhound'             , :level => 16 , :undead => false, :noncorp => false, :hated => false, :skin => 'yellowed canine' },
+    { :id => 151, :name => 'mountain ogre'                 , :level => 16 , :undead => false, :noncorp => false, :hated => false, :skin => 'ogre nose' },
+    { :id => 152, :name => 'phosphorescent worm'           , :level => 16 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 153, :name => 'plains orc warrior'            , :level => 16 , :undead => false, :noncorp => false, :hated => true , :skin => 'scraggly orc scalp' },
+    { :id => 154, :name => 'red bear'                      , :level => 16 , :undead => false, :noncorp => false, :hated => false, :skin => 'bear paw' },
+    { :id => 155, :name => 'wind witch'                    , :level => 16 , :undead => false, :noncorp => false, :hated => false, :skin => 'crooked witch nose' },
+    { :id => 156, :name => 'black panther'                 , :level => 17 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 157, :name => 'dark shambler'                 , :level => 17 , :undead => false, :noncorp => false, :hated => false, :skin => 'glistening black eye' },
+    { :id => 158, :name => 'forest ogre'                   , :level => 17 , :undead => false, :noncorp => false, :hated => false, :skin => 'ogre tusk' },
+    { :id => 159, :name => 'giant veaba'                   , :level => 17 , :undead => false, :noncorp => false, :hated => false, :skin => 'veaba claw' },
+    { :id => 160, :name => 'gnoll guard'                   , :level => 17 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 161, :name => 'krolvin mercenary'             , :level => 17 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 162, :name => 'mountain goat'                 , :level => 17 , :undead => false, :noncorp => false, :hated => false, :skin => 'goat hoof' },
+    { :id => 163, :name => 'mountain troll'                , :level => 17 , :undead => false, :noncorp => false, :hated => true , :skin => 'troll toe' },
+    { :id => 164, :name => 'plains ogre'                   , :level => 17 , :undead => false, :noncorp => false, :hated => true , :skin => 'ogre nose' },
+    { :id => 165, :name => 'plains orc scout'              , :level => 17 , :undead => false, :noncorp => false, :hated => true , :skin => 'scraggly orc scalp' },
+    { :id => 166, :name => 'spiked cavern urchin'          , :level => 17 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 167, :name => 'bighorn sheep'                 , :level => 18 , :undead => false, :noncorp => false, :hated => false, :skin => 'bighorn sheepskin' },
+    { :id => 168, :name => 'cave lizard'                   , :level => 18 , :undead => false, :noncorp => false, :hated => false, :skin => 'stone-grey lizard tail' },
+    { :id => 169, :name => 'elder ghoul master'            , :level => 18 , :undead => true , :noncorp => false, :hated => false, :skin => 'ghoul master claw' },
+    { :id => 170, :name => 'fire cat'                      , :level => 18 , :undead => false, :noncorp => false, :hated => false, :skin => 'fire cat claw' },
+    { :id => 171, :name => 'ghostly warrior'               , :level => 18 , :undead => true , :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id => 172, :name => 'greenwing hornet'              , :level => 18 , :undead => false, :noncorp => false, :hated => false, :skin => 'hornet stinger' },
+    { :id => 173, :name => 'mountain lion'                 , :level => 18 , :undead => false, :noncorp => false, :hated => false, :skin => 'mountain lion skin' },
+    { :id => 174, :name => 'nedum vereri'                  , :level => 18 , :undead => true , :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 175, :name => 'plains lion'                   , :level => 18 , :undead => false, :noncorp => false, :hated => false, :skin => 'plains lion skin' },
+    { :id => 176, :name => 'plains orc shaman'             , :level => 18 , :undead => false, :noncorp => false, :hated => true , :skin => 'scraggly orc scalp' },
+    { :id => 177, :name => 'rotting krolvin pirate'        , :level => 18 , :undead => true , :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 178, :name => 'shelfae warlord'               , :level => 18 , :undead => false, :noncorp => false, :hated => false, :skin => 'orange shelfae scale' },
+    { :id => 179, :name => 'thunder troll'                 , :level => 18 , :undead => false, :noncorp => false, :hated => true , :skin => 'troll scalp' },
+    { :id => 180, :name => 'war troll'                     , :level => 18 , :undead => false, :noncorp => false, :hated => true , :skin => 'troll heart' },
+    { :id => 181, :name => 'krolvin warrior'               , :level => 19 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 182, :name => 'agresh troll chieftain'        , :level => 20 , :undead => false, :noncorp => false, :hated => true , :skin => 'UNKNOWN' },
+    { :id => 183, :name => 'arch wight'                    , :level => 20 , :undead => true , :noncorp => false, :hated => false, :skin => 'wight skin' },
+    { :id => 184, :name => 'gnoll priest'                  , :level => 20 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 185, :name => 'major spider'                  , :level => 20 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 186, :name => 'massive grahnk'                , :level => 20 , :undead => false, :noncorp => false, :hated => true , :skin => 'UNKNOWN' },
+    { :id => 187, :name => 'ogre warrior'                  , :level => 20 , :undead => false, :noncorp => false, :hated => true , :skin => 'ogre tooth' },
+    { :id => 188, :name => 'steel golem'                   , :level => 20 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 189, :name => 'striped warcat'                , :level => 20 , :undead => false, :noncorp => false, :hated => false, :skin => 'warcat whisker' },
+    { :id => 190, :name => 'wood wight'                    , :level => 20 , :undead => true , :noncorp => false, :hated => false, :skin => 'wight scalp' },
+    { :id => 191, :name => 'ancient ghoul master'          , :level => 21 , :undead => true , :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 192, :name => 'Arachne servant'               , :level => 21 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 193, :name => 'cave bear'                     , :level => 21 , :undead => false, :noncorp => false, :hated => false, :skin => 'bear claw' },
+    { :id => 194, :name => 'plains orc chieftain'          , :level => 21 , :undead => false, :noncorp => false, :hated => true , :skin => 'scraggly orc scalp' },
+    { :id => 195, :name => 'cougar'                        , :level => 22 , :undead => false, :noncorp => false, :hated => false, :skin => 'cougar tail' },
+    { :id => 196, :name => 'crested basilisk'              , :level => 22 , :undead => false, :noncorp => false, :hated => false, :skin => 'basilisk crest' },
+    { :id => 197, :name => 'dark panther'                  , :level => 22 , :undead => false, :noncorp => false, :hated => false, :skin => 'panther pelt' },
+    { :id => 198, :name => 'warthog'                       , :level => 22 , :undead => false, :noncorp => false, :hated => false, :skin => 'warthog snout' },
+    { :id => 199, :name => 'Arachne acolyte'               , :level => 23 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 200, :name => 'centaur'                       , :level => 23 , :undead => false, :noncorp => false, :hated => false, :skin => 'centaur hide' },
+    { :id => 470, :name => 'roan centaur'                  , :level => 23 , :undead => false, :noncorp => false, :hated => false, :skin => 'centaur hide' },
+    { :id => 471, :name => 'white centaur'                 , :level => 23 , :undead => false, :noncorp => false, :hated => false, :skin => 'centaur hide' },
+    { :id => 472, :name => 'black centaur'                 , :level => 23 , :undead => false, :noncorp => false, :hated => false, :skin => 'centaur hide' },
+    { :id => 473, :name => 'bay centaur'                   , :level => 23 , :undead => false, :noncorp => false, :hated => false, :skin => 'centaur hide' },
+    { :id => 474, :name => 'tan centaur'                   , :level => 23 , :undead => false, :noncorp => false, :hated => false, :skin => 'centaur hide' },
+    { :id => 201, :name => 'centaur ranger'                , :level => 23 , :undead => false, :noncorp => false, :hated => false, :skin => 'centaur hide' },
+    { :id => 202, :name => 'crazed zombie'                 , :level => 23 , :undead => false, :noncorp => false, :hated => false, :skin => 'zombie scalp' },
+    { :id => 203, :name => 'fenghai'                       , :level => 23 , :undead => false, :noncorp => false, :hated => false, :skin => 'fenghai fur' },
+    { :id => 204, :name => 'niirsha'                       , :level => 23 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 205, :name => 'nonomino'                      , :level => 23 , :undead => true , :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 206, :name => 'rotting woodsman'              , :level => 23 , :undead => true , :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 207, :name => 'zombie'                        , :level => 23 , :undead => true , :noncorp => false, :hated => false, :skin => 'zombie scalp' },
+    { :id => 208, :name => 'arctic wolverine'              , :level => 24 , :undead => false, :noncorp => false, :hated => false, :skin => 'wolverine tail' },
+    { :id => 209, :name => 'burly reiver'                  , :level => 24 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 210, :name => 'giant albino scorpion'         , :level => 24 , :undead => false, :noncorp => false, :hated => false, :skin => 'scorpion stinger' },
+    { :id => 211, :name => 'ice hound'                     , :level => 24 , :undead => false, :noncorp => false, :hated => false, :skin => 'ice hound ear' },
+    { :id => 212, :name => 'night hound'                   , :level => 24 , :undead => false, :noncorp => false, :hated => false, :skin => 'night hound hide' },
+    { :id => 213, :name => 'reiver'                        , :level => 24 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 214, :name => 'roa\'ter wormling'             , :level => 24 , :undead => false, :noncorp => false, :hated => true , :skin => 'none' },
+    { :id => 215, :name => 'tree viper'                    , :level => 24 , :undead => false, :noncorp => false, :hated => false, :skin => 'tree viper fang' },
+    { :id => 216, :name => 'veteran reiver'                , :level => 24 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 217, :name => 'wolverine'                     , :level => 24 , :undead => false, :noncorp => false, :hated => false, :skin => 'wolverine pelt' },
+    { :id => 218, :name => 'carceris'                      , :level => 25 , :undead => true , :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 219, :name => 'gnoll jarl'                    , :level => 25 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 220, :name => 'krolvin warfarer'              , :level => 25 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 221, :name => 'sacristan spirit'              , :level => 25 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 222, :name => 'spectral monk'                 , :level => 25 , :undead => true , :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id => 223, :name => 'Arachne priest'                , :level => 26 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 224, :name => 'Arachne priestess'             , :level => 26 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 225, :name => 'jungle troll'                  , :level => 26 , :undead => false, :noncorp => false, :hated => true , :skin => 'troll knuckle' },
+    { :id => 226, :name => 'tree spirit'                   , :level => 26 , :undead => true , :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id => 227, :name => 'cyclops'                       , :level => 27 , :undead => false, :noncorp => false, :hated => true , :skin => 'cyclops eye' },
+    { :id => 228, :name => 'frenzied monk'                 , :level => 27 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 229, :name => 'grutik savage'                 , :level => 27 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 230, :name => 'lesser stone gargoyle'         , :level => 27 , :undead => false, :noncorp => false, :hated => true , :skin => 'none' },
+    { :id => 231, :name => 'monastic lich'                 , :level => 27 , :undead => true , :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 232, :name => 'snow leopard'                  , :level => 27 , :undead => false, :noncorp => false, :hated => false, :skin => 'leapard skin' },
+    { :id => 233, :name => 'troll chieftain'               , :level => 27 , :undead => false, :noncorp => false, :hated => true , :skin => 'troll fang' },
+    { :id => 234, :name => 'darken'                        , :level => 28 , :undead => false, :noncorp => true,  :hated => false, :skin => 'UNKNOWN' },
+    { :id => 235, :name => 'dobrem'                        , :level => 28 , :undead => false, :noncorp => false, :hated => false, :skin => 'dobrem snout' },
+    { :id => 236, :name => 'fire ogre'                     , :level => 28 , :undead => false, :noncorp => false, :hated => true , :skin => 'UNKNOWN' },
+    { :id => 237, :name => 'giant hawk-owl'                , :level => 28 , :undead => false, :noncorp => false, :hated => false, :skin => 'tufted hawk-owl ear' },
+    { :id => 238, :name => 'ki-lin'                        , :level => 28 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 239, :name => 'martial eagle'                 , :level => 28 , :undead => false, :noncorp => false, :hated => false, :skin => 'martial eagle talon' },
+    { :id => 240, :name => 'moaning spirit'                , :level => 28 , :undead => true , :noncorp => true,  :hated => false, :skin => 'UNKNOWN' },
+    { :id => 241, :name => 'arctic manticore'              , :level => 29 , :undead => false, :noncorp => false, :hated => false, :skin => 'arctic manticore mane' },
+    { :id => 242, :name => 'grutik shaman'                 , :level => 29 , :undead => false, :noncorp => false, :hated => true , :skin => 'none' },
+    { :id => 243, :name => 'ice troll'                     , :level => 29 , :undead => false, :noncorp => false, :hated => true , :skin => 'ice troll scalp' },
+    { :id => 244, :name => 'pra\'eda'                      , :level => 29 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 245, :name => 'scaly burgee'                  , :level => 29 , :undead => false, :noncorp => false, :hated => false, :skin => 'scaly burgee shell' },
+    { :id => 246, :name => 'elder tree spirit'             , :level => 30 , :undead => true , :noncorp => true,  :hated => false, :skin => 'UNKNOWN' },
+    { :id => 247, :name => 'giant albino tomb spider'      , :level => 30 , :undead => false, :noncorp => false, :hated => false, :skin => 'sheer white spider mandible' },
+    { :id => 248, :name => 'hisskra warrior'               , :level => 30 , :undead => false, :noncorp => false, :hated => false, :skin => 'hisskra skin' },
+    { :id => 249, :name => 'hooded figure'                 , :level => 30 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 250, :name => 'hunter troll'                  , :level => 30 , :undead => false, :noncorp => false, :hated => true , :skin => 'troll tongue' },
+    { :id => 251, :name => 'jungle troll chieftain'        , :level => 30 , :undead => false, :noncorp => false, :hated => true , :skin => 'scrap of troll skin' },
+    { :id => 252, :name => 'lesser wood sprite'            , :level => 30 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 253, :name => 'mammoth arachnid'              , :level => 30 , :undead => false, :noncorp => false, :hated => false, :skin => 'mandible' },
+    { :id => 254, :name => 'tegursh sentry'                , :level => 30 , :undead => false, :noncorp => false, :hated => false, :skin => 'tegursh claw' },
+    { :id => 255, :name => 'ash hag'                       , :level => 31 , :undead => false, :noncorp => false, :hated => false, :skin => 'ash hag nose' },
+    { :id => 256, :name => 'krynch'                        , :level => 31 , :undead => false, :noncorp => false, :hated => true , :skin => 'krynch shinbone' },
+    { :id => 257, :name => 'skeletal ice troll'            , :level => 31 , :undead => true , :noncorp => false, :hated => true , :skin => 'UNKNOWN' },
+    { :id => 258, :name => 'wild hound'                    , :level => 31 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 259, :name => 'caribou'                       , :level => 32 , :undead => false, :noncorp => false, :hated => false, :skin => 'pair of caribou antlers' },
+    { :id => 260, :name => 'ghostly mara'                  , :level => 32 , :undead => false, :noncorp => true,  :hated => false, :skin => 'UNKNOWN' },
+    { :id => 261, :name => 'giant fog beetle'              , :level => 32 , :undead => false, :noncorp => false, :hated => false, :skin => 'fog beetle carapace' },
+    { :id => 262, :name => 'rotting corpse'                , :level => 32 , :undead => true , :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 263, :name => 'rotting farmhand'              , :level => 32 , :undead => true , :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 264, :name => 'ghostly pooka'                 , :level => 33 , :undead => true , :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id => 265, :name => 'hisskra shaman'                , :level => 33 , :undead => false, :noncorp => false, :hated => false, :skin => 'hisskra tooth' },
+    { :id => 266, :name => 'maw spore'                     , :level => 33 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 267, :name => 'mezic'                         , :level => 33 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 268, :name => 'moor hound'                    , :level => 33 , :undead => false, :noncorp => false, :hated => false, :skin => 'moor hound paw' },
+    { :id => 269, :name => 'sand beetle'                   , :level => 33 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 270, :name => 'skeletal giant'                , :level => 33 , :undead => true , :noncorp => false, :hated => true , :skin => 'skeletal giant bone' },
+    { :id => 271, :name => 'three-toed tegu'               , :level => 33 , :undead => false, :noncorp => false, :hated => false, :skin => 'tailspike' },
+    { :id => 272, :name => 'cold guardian'                 , :level => 34 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 273, :name => 'colossus vulture'              , :level => 34 , :undead => false, :noncorp => false, :hated => false, :skin => 'ruff of vulture feathers' },
+    { :id => 274, :name => 'hisskra chieftain'             , :level => 34 , :undead => false, :noncorp => false, :hated => false, :skin => 'hisskra crest' },
+    { :id => 275, :name => 'lava troll'                    , :level => 34 , :undead => false, :noncorp => false, :hated => true , :skin => 'troll eye' },
+    { :id => 276, :name => 'moor witch'                    , :level => 34 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 277, :name => 'rock troll zombie'             , :level => 34 , :undead => true , :noncorp => false, :hated => false, :skin => 'decaying troll eye' },
+    { :id => 278, :name => 'skeletal soldier'              , :level => 34 , :undead => true , :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 279, :name => 'spectral warrior'              , :level => 34 , :undead => true , :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id => 280, :name => 'tundra giant'                  , :level => 34 , :undead => false, :noncorp => false, :hated => true , :skin => 'tundra giant tooth' },
+    { :id => 281, :name => 'barghest'                      , :level => 35 , :undead => true , :noncorp => true,  :hated => false, :skin => 'UNKNOWN' },
+    { :id => 282, :name => 'bog troll'                     , :level => 35 , :undead => false, :noncorp => false, :hated => true , :skin => 'troll ear' },
+    { :id => 283, :name => 'moor eagle'                    , :level => 35 , :undead => false, :noncorp => false, :hated => false, :skin => 'talon' },
+    { :id => 284, :name => 'shimmering fungus'             , :level => 35 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 285, :name => 'spectral shade'                , :level => 35 , :undead => true , :noncorp => true,  :hated => false, :skin => 'UNKNOWN' },
+    { :id => 286, :name => 'spectral woodsman'             , :level => 35 , :undead => true , :noncorp => true,  :hated => false, :skin => 'UNKNOWN' },
+    { :id => 287, :name => 'troll wraith'                  , :level => 35 , :undead => false, :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id => 288, :name => 'water wyrd'                    , :level => 35 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 289, :name => 'arctic titan'                  , :level => 36 , :undead => false, :noncorp => false, :hated => true , :skin => 'artic titan toe' },
+    { :id => 290, :name => 'dust beetle'                   , :level => 36 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 291, :name => 'fire giant'                    , :level => 36 , :undead => false, :noncorp => false, :hated => true , :skin => 'fire giant mane' },
+    { :id => 292, :name => 'krolvin slaver'                , :level => 36 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 293, :name => 'snow crone'                    , :level => 36 , :undead => false, :noncorp => false, :hated => false, :skin => 'crooked crone finger' },
+    { :id => 294, :name => 'spectral lord'                 , :level => 36 , :undead => true , :noncorp => true,  :hated => false, :skin => 'UNKNOWN' },
+    { :id => 295, :name => 'undertaker bat'                , :level => 36 , :undead => false, :noncorp => false, :hated => false, :skin => 'bat wing' },
+    { :id => 296, :name => 'huge mein golem'               , :level => 37 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 297, :name => 'lesser moor wight'             , :level => 37 , :undead => true , :noncorp => false, :hated => false, :skin => 'wight skull' },
+    { :id => 298, :name => 'magru'                         , :level => 37 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 299, :name => 'shadow mare'                   , :level => 37 , :undead => true , :noncorp => true,  :hated => false, :skin => 'silver-tipped horseshoe' },
+    { :id => 300, :name => 'Sheruvian initiate'            , :level => 37 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 301, :name => 'skeletal warhorse'             , :level => 37 , :undead => true , :noncorp => false, :hated => false, :skin => 'skeletal warhorse jaw' },
+    { :id => 302, :name => 'tusked ursian'                 , :level => 37 , :undead => false, :noncorp => false, :hated => false, :skin => 'ursian tusk' },
+    { :id => 303, :name => 'frost giant'                   , :level => 38 , :undead => false, :noncorp => false, :hated => true , :skin => 'giant toe' },
+    { :id => 304, :name => 'grizzly bear'                  , :level => 38 , :undead => false, :noncorp => false, :hated => false, :skin => 'grizzly bear hide' },
+    { :id => 305, :name => 'krolvin corsair'               , :level => 38 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 306, :name => 'mud wasp'                      , :level => 38 , :undead => false, :noncorp => false, :hated => false, :skin => 'wasp stinger' },
+    { :id => 307, :name => 'shadow steed'                  , :level => 38 , :undead => true , :noncorp => true,  :hated => false, :skin => 'silvery tail' },
+    { :id => 308, :name => 'vesperti'                      , :level => 38 , :undead => false, :noncorp => false, :hated => false, :skin => 'vesperti claw' },
+    { :id => 309, :name => 'wood sprite'                   , :level => 38 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 310, :name => 'greater bog troll'             , :level => 39 , :undead => false, :noncorp => false, :hated => true , :skin => 'cracked troll jawbone' },
+    { :id => 311, :name => 'greater moor wight'            , :level => 39 , :undead => true , :noncorp => false, :hated => false, :skin => 'wight mane' },
+    { :id => 312, :name => 'stone gargoyle'                , :level => 39 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 313, :name => 'storm giant'                   , :level => 39 , :undead => false, :noncorp => false, :hated => true , :skin => 'giant skin' },
+    { :id => 314, :name => 'vourkha'                       , :level => 39 , :undead => true , :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 315, :name => 'forest bendith'                , :level => 40 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 316, :name => 'kiramon worker'                , :level => 40 , :undead => false, :noncorp => false, :hated => true , :skin => 'kiramon mandible' },
+    { :id => 317, :name => 'myklian'                       , :level => 40 , :undead => false, :noncorp => false, :hated => false, :skin => '.* myklian scale ' },
+    { :id => 318, :name => 'spectral miner'                , :level => 40 , :undead => true , :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id => 319, :name => 'bog wraith'                    , :level => 41 , :undead => true , :noncorp => true,  :hated => false, :skin => 'UNKNOWN' },
+    { :id => 320, :name => 'lesser ice giant'              , :level => 41 , :undead => false, :noncorp => false, :hated => true , :skin => 'giant scalp' },
+    { :id => 321, :name => 'roa\'ter'                      , :level => 41 , :undead => false, :noncorp => false, :hated => true , :skin => 'roa\'ter skin' },
+    { :id => 322, :name => 'Sheruvian monk'                , :level => 41 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 323, :name => 'skeletal lord'                 , :level => 41 , :undead => true , :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 324, :name => 'baesrukha'                     , :level => 42 , :undead => true , :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 325, :name => 'dark vortece'                  , :level => 42 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 326, :name => 'frozen corpse'                 , :level => 42 , :undead => true , :noncorp => false, :hated => false, :skin => 'frozen scalp' },
+    { :id => 327, :name => 'minor glacei'                  , :level => 42 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 328, :name => 'phantasma'                     , :level => 42 , :undead => true , :noncorp => true,  :hated => false, :skin => 'UNKNOWN' },
+    { :id => 329, :name => 'shan cleric'                   , :level => 42 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 330, :name => 'shan ranger'                   , :level => 42 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 331, :name => 'shan warrior'                  , :level => 42 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 332, :name => 'shan wizard'                   , :level => 42 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 333, :name => 'siren lizard'                  , :level => 42 , :undead => false, :noncorp => false, :hated => false, :skin => 'multicolored siren lizard skin' },
+    { :id => 334, :name => 'swamp hag'                     , :level => 42 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 335, :name => 'dreadnought raptor'            , :level => 43 , :undead => false, :noncorp => false, :hated => false, :skin => 'raptor feathers' },
+    { :id => 336, :name => 'night mare'                    , :level => 43 , :undead => true , :noncorp => false, :hated => false, :skin => 'silvery hoof' },
+    { :id => 337, :name => 'wasp nest'                     , :level => 43 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 338, :name => 'bog wight'                     , :level => 44 , :undead => true , :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 339, :name => 'firethorn shoot'               , :level => 44 , :undead => false, :noncorp => false, :hated => false, :skin => 'pulsating firethorn' },
+    { :id => 340, :name => 'forest trali shaman'           , :level => 46 , :undead => false, :noncorp => false, :hated => false, :skin => 'trali scalp' },
+    { :id => 341, :name => 'gaunt spectral servant'        , :level => 44 , :undead => true , :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id => 342, :name => 'mastodonic leopard'            , :level => 44 , :undead => false, :noncorp => false, :hated => false, :skin => 'spotted leopard pelt' },
+    { :id => 343, :name => 'polar bear'                    , :level => 44 , :undead => false, :noncorp => false, :hated => false, :skin => 'polar bear skin' },
+    { :id => 344, :name => 'ice wraith'                    , :level => 45 , :undead => true , :noncorp => true,  :hated => false, :skin => 'UNKNOWN' },
+    { :id => 345, :name => 'lesser vruul'                  , :level => 45 , :undead => true , :noncorp => false, :hated => false, :skin => 'vruul skin' },
+    { :id => 346, :name => 'cinder wasp'                   , :level => 46 , :undead => false, :noncorp => false, :hated => false, :skin => 'shimmering wasp wing' },
+    { :id => 347, :name => 'forest trali'                  , :level => 44 , :undead => false, :noncorp => false, :hated => false, :skin => 'trali hide' },
+    { :id => 348, :name => 'greater ice giant'             , :level => 46 , :undead => false, :noncorp => false, :hated => true , :skin => 'giant scalp' },
+    { :id => 349, :name => 'lesser faeroth'                , :level => 46 , :undead => false, :noncorp => false, :hated => false, :skin => 'mottled faeroth crest' },
+    { :id => 350, :name => 'rotting chimera'               , :level => 46 , :undead => true , :noncorp => false, :hated => false, :skin => 'chimera stinger' },
+    { :id => 351, :name => 'bog spectre'                   , :level => 47 , :undead => false, :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id => 352, :name => 'major glacei'                  , :level => 47 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 353, :name => 'dybbuk'                        , :level => 48 , :undead => true , :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 354, :name => 'horned vor\'taz'               , :level => 48 , :undead => false, :noncorp => false, :hated => false, :skin => 'vor\'taz horn' },
+    { :id => 355, :name => 'kiramon defender'              , :level => 46 , :undead => false, :noncorp => false, :hated => true , :skin => 'kiramon tongue' },
+    { :id => 356, :name => 'necrotic snake'                , :level => 48 , :undead => true , :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 357, :name => 'red-scaled thrak'              , :level => 48 , :undead => false, :noncorp => false, :hated => false, :skin => 'thrak tail' },
+    { :id => 358, :name => 'sand devil'                    , :level => 48 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 359, :name => 'warrior shade'                 , :level => 48 , :undead => false, :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id => 360, :name => 'waern'                         , :level => 49 , :undead => true , :noncorp => false, :hated => false, :skin => 'waern fur' },
+    { :id => 361, :name => 'banshee'                       , :level => 50 , :undead => true , :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id => 362, :name => 'flesh golem'                   , :level => 50 , :undead => true , :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 363, :name => 'greater faeroth'               , :level => 50 , :undead => false, :noncorp => false, :hated => false, :skin => 'faeroth fang' },
+    { :id => 364, :name => 'seeker'                        , :level => 52 , :undead => true , :noncorp => false, :hated => false, :skin => 'seeker eye' },
+    { :id => 365, :name => 'snow madrinol'                 , :level => 52 , :undead => false, :noncorp => false, :hated => false, :skin => 'mandrinol skin' },
+    { :id => 366, :name => 'tomb troll'                    , :level => 52 , :undead => false, :noncorp => false, :hated => false, :skin => 'troll thumb' },
+    { :id => 367, :name => 'wooly mammoth'                 , :level => 52 , :undead => false, :noncorp => false, :hated => false, :skin => 'mammoth tusk' },
+    { :id => 368, :name => 'ice golem'                     , :level => 53 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 369, :name => 'lesser ice elemental'          , :level => 53 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 370, :name => 'sabre-tooth tiger'             , :level => 53 , :undead => false, :noncorp => false, :hated => false, :skin => 'tiger incisor' },
+    { :id => 371, :name => 'stone sentinel'                , :level => 53 , :undead => false, :noncorp => false, :hated => true , :skin => 'none' },
+    { :id => 372, :name => 'animated slush'                , :level => 54 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 373, :name => 'ethereal mage apprentice'      , :level => 54 , :undead => true , :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id => 374, :name => 'skayl'                         , :level => 54 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 375, :name => 'tomb troll necromancer'        , :level => 54 , :undead => false, :noncorp => false, :hated => false, :skin => 'troll eyeball' },
+    { :id => 376, :name => 'eidolon'                       , :level => 55 , :undead => true , :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id => 377, :name => 'nightmare steed'               , :level => 55 , :undead => true , :noncorp => true,  :hated => false, :skin => 'silvery mane' },
+    { :id => 378, :name => 'stone troll'                   , :level => 55 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 379, :name => 'decaying Citadel guardsman'    , :level => 57 , :undead => true , :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 380, :name => 'glacial morph'                 , :level => 57 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 381, :name => 'lava golem'                    , :level => 57 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 382, :name => 'massive pyrothag'              , :level => 58 , :undead => false, :noncorp => false, :hated => false, :skin => 'pyrothag hide' },
+    { :id => 383, :name => 'rotting Citadel arbalester'    , :level => 58 , :undead => true , :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 384, :name => 'stone giant'                   , :level => 58 , :undead => false, :noncorp => false, :hated => true , :skin => 'none' },
+    { :id => 385, :name => 'black forest viper'            , :level => 59 , :undead => false, :noncorp => false, :hated => false, :skin => 'viper fang' },
+    { :id => 386, :name => 'massive black boar'            , :level => 59 , :undead => false, :noncorp => false, :hated => false, :skin => 'heavy grey tusk' },
+    { :id => 387, :name => 'black forest ogre'             , :level => 60 , :undead => false, :noncorp => false, :hated => true , :skin => 'none' },
+    { :id => 388, :name => 'fire elemental'                , :level => 60 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 389, :name => 'putrefied Citadel herald'      , :level => 60 , :undead => true , :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 390, :name => 'Illoke mystic'                 , :level => 62 , :undead => false, :noncorp => false, :hated => true , :skin => 'none' },
+    { :id => 391, :name => 'phantasmal bestial swordsman'  , :level => 62 , :undead => true , :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id => 392, :name => 'stone mastiff'                 , :level => 62 , :undead => false, :noncorp => false, :hated => true , :skin => 'stone heart' },
+    { :id => 393, :name => 'ice elemental'                 , :level => 63 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 394, :name => 'massive troll king'            , :level => 63 , :undead => false, :noncorp => false, :hated => true , :skin => 'massive troll king hide' },
+    { :id => 395, :name => 'Sheruvian harbinger'           , :level => 63 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 396, :name => 'soul golem'                    , :level => 63 , :undead => true , :noncorp => false, :hated => true , :skin => 'none' },
+    { :id => 397, :name => 'wind wraith'                   , :level => 63 , :undead => false, :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id => 398, :name => 'fire sprite'                   , :level => 64 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 399, :name => 'grifflet'                      , :level => 64 , :undead => false, :noncorp => false, :hated => false, :skin => 'grifflet pelt' },
+    { :id => 400, :name => 'emaciated hierophant'          , :level => 66 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 401, :name => 'red tsark'                     , :level => 66 , :undead => false, :noncorp => false, :hated => false, :skin => 'tsark skin' },
+    { :id => 402, :name => 'Illoke shaman'                 , :level => 67 , :undead => false, :noncorp => false, :hated => true , :skin => 'none' },
+    { :id => 403, :name => 'muscular supplicant'           , :level => 67 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 404, :name => 'yeti'                          , :level => 67 , :undead => false, :noncorp => false, :hated => true , :skin => 'none' },
+    { :id => 405, :name => 'lesser griffin'                , :level => 69 , :undead => false, :noncorp => false, :hated => false, :skin => 'griffen pelt' },
+    { :id => 406, :name => 'hunch-backed dogmatist'        , :level => 70 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 407, :name => 'krag yeti'                     , :level => 70 , :undead => false, :noncorp => false, :hated => true , :skin => 'UNKNOWN' },
+    { :id => 408, :name => 'fire mage'                     , :level => 71 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 409, :name => 'krag dweller'                  , :level => 72 , :undead => false, :noncorp => false, :hated => true , :skin => 'brilliant purple opal' },
+    { :id => 410, :name => 'storm griffin'                 , :level => 73 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 411, :name => 'lesser minotaur'               , :level => 74 , :undead => false, :noncorp => false, :hated => true , :skin => 'minotaur hide' },
+    { :id => 412, :name => 'greater vruul'                 , :level => 75 , :undead => true , :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 413, :name => 'moulis'                        , :level => 75 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 414, :name => 'naisirc'                       , :level => 75 , :undead => true , :noncorp => true,  :hated => false, :skin => 'UNKNOWN' },
+    { :id => 415, :name => 'minotaur warrior'              , :level => 76 , :undead => false, :noncorp => false, :hated => true , :skin => 'minotaur horn' },
+    { :id => 416, :name => 'shrickhen'                     , :level => 76 , :undead => true , :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 417, :name => 'farlook'                       , :level => 77 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 418, :name => 'raving lunatic'                , :level => 77 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 419, :name => 'dhu goleras'                   , :level => 78 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 420, :name => 'minotaur magi'                 , :level => 78 , :undead => true , :noncorp => false, :hated => false, :skin => 'minotaur hoof' },
+    { :id => 421, :name => 'seraceris'                     , :level => 78 , :undead => true , :noncorp => true,  :hated => false, :skin => 'UNKNOWN' },
+    { :id => 422, :name => 'clay faceless being'           , :level => 79 , :undead => false, :noncorp => false, :hated => true , :skin => 'UNKNOWN' },
+    { :id => 423, :name => 'Vvrael witch'                  , :level => 80 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 424, :name => 'Csetairi'                      , :level => 81 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 425, :name => 'bent being'                    , :level => 82 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 426, :name => 'caedera'                       , :level => 82 , :undead => false, :noncorp => false, :hated => false, :skin => 'caedera skin' },
+    { :id => 427, :name => 'earth elemental'               , :level => 82 , :undead => false, :noncorp => false, :hated => true , :skin => 'UNKNOWN' },
+    { :id => 428, :name => 'gnarled being'                 , :level => 82 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 429, :name => 'stooped being'                 , :level => 82 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 430, :name => 'twisted being'                 , :level => 82 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 431, :name => 'lesser construct'              , :level => 83 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 432, :name => 'greater krynch'                , :level => 84 , :undead => false, :noncorp => false, :hated => true , :skin => 'UNKNOWN' },
+    { :id => 433, :name => 'gremlock'                      , :level => 84 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 434, :name => 'lich qyn\'arj'                 , :level => 84 , :undead => true , :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 435, :name => 'Vvrael warlock'                , :level => 84 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 436, :name => 'aivren'                        , :level => 86 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 437, :name => 'festering taint'               , :level => 86 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 438, :name => 'Illoke elder'                  , :level => 86 , :undead => false, :noncorp => false, :hated => true , :skin => 'UNKNOWN' },
+    { :id => 439, :name => 'Ithzir seer'                   , :level => 98 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 440, :name => 'n\'ecare'                      , :level => 87 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 441, :name => 'greater earth elemental'       , :level => 88 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 442, :name => 'Illoke jarl'                   , :level => 89 , :undead => false, :noncorp => false, :hated => true , :skin => 'UNKNOWN' },
+    { :id => 443, :name => 'Ithzir scout'                  , :level => 89 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 444, :name => 'Ithzir initiate'               , :level => 91 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 445, :name => 'lost soul'                     , :level => 91 , :undead => true , :noncorp => true,  :hated => false, :skin => 'UNKNOWN' },
+    { :id => 446, :name => 'Ithzir janissary'              , :level => 92 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 447, :name => 'water elemental'               , :level => 92 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 448, :name => 'Ithzir herald'                 , :level => 93 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 449, :name => 'vaespilon'                     , :level => 93 , :undead => true , :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 450, :name => 'triton dissembler'             , :level => 94 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 451, :name => 'greater construct'             , :level => 96 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 452, :name => 'Ithzir adept'                  , :level => 96 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 453, :name => 'siren'                         , :level => 96 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 454, :name => 'triton executioner'            , :level => 96 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 455, :name => 'fallen crusader'               , :level => 97 , :undead => false, :noncorp => true,  :hated => false, :skin => 'UNKNOWN' },
+    { :id => 456, :name => 'spectral triton defender'      , :level => 98 , :undead => true , :noncorp => true,  :hated => false, :skin => 'UNKNOWN' },
+    { :id => 457, :name => 'triton combatant'              , :level => 98 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 458, :name => 'glistening cerebralite'        , :level => 100, :undead => false, :noncorp => false, :hated => false, :skin => 'cerebralite tentacle' },
+    { :id => 459, :name => 'triton radical'                , :level => 100, :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 460, :name => 'war griffin'                   , :level => 100, :undead => false, :noncorp => false, :hated => false, :skin => 'war griffin talon' },
+    { :id => 461, :name => 'triton magus'                  , :level => 102, :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 462, :name => 'enormous rift crawler'         , :level => 103, :undead => false, :noncorp => false, :hated => false, :skin => 'jagged rift crawler tooth' },
+    { :id => 463, :name => 'ethereal triton sentry'        , :level => 103, :undead => true , :noncorp => true,  :hated => false, :skin => 'UNKNOWN' },
+    { :id => 464, :name => 'darkly inked fetish master'    , :level => 104, :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 465, :name => 'greater water elemental'       , :level => 105, :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 466, :name => 'murky soul siphon'             , :level => 106, :undead => true , :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 467, :name => 'Vvrael destroyer'              , :level => 108, :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 468, :name => 'infernal lich'                 , :level => 110, :undead => true , :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    # Seen this both ways... which is correct?
+    { :id => 469, :name => 'faceless clay being'           , :level => 79 , :undead => false, :noncorp => false, :hated => true,  :skin => 'UNKNOWN' },
+
+    # Red forest
+    { :id => 470, :name => 'direbear'                      , :level => 64 , :undead => false, :noncorp => false, :hated => false, :skin => 'direbear fang' },
+    { :id => 471, :name => 'Ilvari pixie'                  , :level => 74 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 472, :name => 'Ilvari sprite'                 , :level => 73 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 473, :name => 'Ilvari pixie'                  , :level => 74 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 474, :name => 'monstrous direwolf'            , :level => 67 , :undead => false, :noncorp => false, :hated => false, :skin => 'red eye' },
+    { :id => 475, :name => 'treekin druid'                 , :level => 83 , :undead => false, :noncorp => false, :hated => false, :skin => 'mossy beard' },
+    # Level is a guess. Wiki lists 75-80
+    { :id => 476, :name => 'treekin sapling'               , :level => 78 , :undead => false, :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    { :id => 478, :name => 'treekin warrior'               , :level => 80 , :undead => false, :noncorp => false, :hated => false, :skin => 'bloody bark' },
+    { :id => 479, :name => 'warped tree spirit'            , :level => 68 , :undead => true,  :noncorp => false, :hated => false, :skin => 'UNKNOWN' },
+    # Level is a guess.
+    { :id => 480, :name => 'winged viper'                  , :level => 62 , :undead => false, :noncorp => false, :hated => false, :skin => 'pure white feather' },
+
+    # Frozen bramble
+    { :id => 481, :name => 'blackened decaying tumbleweed' , :level => 39 , :undead => true,  :noncorp => false, :hated => false, :skin => 'dessicated stem' },
+    { :id => 482, :name => 'dark frosty plant'             , :level => 45 , :undead => true,  :noncorp => false, :hated => false, :skin => 'frosted branch' },
+    { :id => 483, :name => 'large thorned shrub'           , :level => 48 , :undead => true,  :noncorp => false, :hated => false, :skin => 'bleached thorn' },
+    { :id => 484, :name => 'shriveled icy creeper'         , :level => 50 , :undead => true,  :noncorp => false, :hated => false, :skin => 'shriveled cutting' },
+    { :id => 485, :name => 'writhing frost-glazed vine'    , :level => 40 , :undead => true,  :noncorp => false, :hated => false, :skin => 'thorn-ridden appendage' },
+    { :id => 486, :name => 'writhing icy bush'             , :level => 36 , :undead => true,  :noncorp => false, :hated => false, :skin => 'blood-stained leaf' },
+
+    # Sanctum of Scales
+    { :id => 487, :name => 'lithe veiled sentinel'         , :level => 96 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 488, :name => 'pale scaled shaper'            , :level =>102 , :undead => true,  :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 489, :name => 'patchwork flesh monstrosity'   , :level => 97 , :undead => true,  :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 490, :name => 'shambling lurk'                , :level => 97 , :undead => true,  :noncorp => false, :hated => false, :skin => 'none' },
+    { :id => 491, :name => 'deathsworn fanatic'            , :level => 95 , :undead => false, :noncorp => false, :hated => false, :skin => 'none' },
+
+    # Level-scaling creatures - using level 999 to keep out of normal results
+   
+    # grimswarm
+    { :id =>9001, :name => 'Grimswarm orc healer'          , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9002, :name => 'Grimswarm orc empath'          , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9003, :name => 'Grimswarm orc sniper'          , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9004, :name => 'Grimswarm orc crusader'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9005, :name => 'Grimswarm orc warlock'         , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9006, :name => 'Grimswarm orc champion'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9007, :name => 'Grimswarm orc huntmaster'      , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9008, :name => 'Grimswarm orc warmage'         , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9009, :name => 'Grimswarm orc soldier'         , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9010, :name => 'Grimswarm orc sorcerer'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9011, :name => 'Grimswarm orc sorceress'       , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9012, :name => 'Grimswarm orc ranger'          , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9013, :name => 'Grimswarm orc warrior'         , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9014, :name => 'Grimswarm orc elementalist'    , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9015, :name => 'Grimswarm orc mage'            , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9016, :name => 'Grimswarm orc wizard'          , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9017, :name => 'Grimswarm orc raider'          , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9018, :name => 'Grimswarm orc acolyte'         , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9019, :name => 'Grimswarm orc guard'           , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9020, :name => 'Grimswarm orc paladin'         , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9021, :name => 'Grimswarm orc battlemage'      , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9022, :name => 'Grimswarm orc archer'          , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9023, :name => 'Grimswarm orc skirmisher'      , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9024, :name => 'Grimswarm orc scout'           , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9025, :name => 'Grimswarm orc shaman'          , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9026, :name => 'Grimswarm orc warchief'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9027, :name => 'Grimswarm orc pillager'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9028, :name => 'Grimswarm orc marauder'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9029, :name => 'Grimswarm orc cleric'          , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9030, :name => 'Grimswarm orc initiate'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9031, :name => 'Grimswarm orc dissembler'      , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9032, :name => 'Grimswarm orc barbarian'       , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9033, :name => 'Grimswarm orc fighter'         , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9034, :name => 'Grimswarm orc scourge'         , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9035, :name => 'Grimswarm orc hunter'          , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9036, :name => 'Grimswarm orc destroyer'       , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9037, :name => 'Grimswarm orc witch'           , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9038, :name => 'Grimswarm orc wrathbringer'    , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9039, :name => 'Grimswarm orc adept'           , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9040, :name => 'Grimswarm orc zealot'          , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9041, :name => 'Grimswarm orc huntmistress'    , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9042, :name => 'Grimswarm orc healer'          , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9043, :name => 'Grimswarm troll empath'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9044, :name => 'Grimswarm troll sniper'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9045, :name => 'Grimswarm troll crusader'      , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9046, :name => 'Grimswarm troll warlock'       , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9047, :name => 'Grimswarm troll champion'      , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9048, :name => 'Grimswarm troll huntmaster'    , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9049, :name => 'Grimswarm troll warmage'       , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9050, :name => 'Grimswarm troll soldier'       , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9051, :name => 'Grimswarm troll sorcerer'      , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9052, :name => 'Grimswarm troll sorceress'     , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9053, :name => 'Grimswarm troll ranger'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9054, :name => 'Grimswarm troll warrior'       , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9055, :name => 'Grimswarm troll elementalist'  , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9056, :name => 'Grimswarm troll mage'          , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9057, :name => 'Grimswarm troll wizard'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9058, :name => 'Grimswarm troll raider'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9059, :name => 'Grimswarm troll acolyte'       , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9060, :name => 'Grimswarm troll guard'         , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9061, :name => 'Grimswarm troll paladin'       , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9062, :name => 'Grimswarm troll battlemage'    , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9063, :name => 'Grimswarm troll archer'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9064, :name => 'Grimswarm troll skirmisher'    , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9065, :name => 'Grimswarm troll scout'         , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9066, :name => 'Grimswarm troll shaman'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9067, :name => 'Grimswarm troll warchief'      , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9068, :name => 'Grimswarm troll pillager'      , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9069, :name => 'Grimswarm troll marauder'      , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9070, :name => 'Grimswarm troll cleric'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9071, :name => 'Grimswarm troll initiate'      , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9072, :name => 'Grimswarm troll dissembler'    , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9073, :name => 'Grimswarm troll barbarian'     , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9074, :name => 'Grimswarm troll fighter'       , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9075, :name => 'Grimswarm troll scourge'       , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9076, :name => 'Grimswarm troll hunter'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9077, :name => 'Grimswarm troll destroyer'     , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9078, :name => 'Grimswarm troll witch'         , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9079, :name => 'Grimswarm troll wrathbringer'  , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9080, :name => 'Grimswarm troll adept'         , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9081, :name => 'Grimswarm troll zealot'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9082, :name => 'Grimswarm troll huntmistress'  , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9083, :name => 'Grimswarm troll healer'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9084, :name => 'Grimswarm giant empath'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9085, :name => 'Grimswarm giant sniper'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9086, :name => 'Grimswarm giant crusader'      , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9087, :name => 'Grimswarm giant warlock'       , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9088, :name => 'Grimswarm giant champion'      , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9089, :name => 'Grimswarm giant huntmaster'    , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9090, :name => 'Grimswarm giant warmage'       , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9091, :name => 'Grimswarm giant soldier'       , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9092, :name => 'Grimswarm giant sorcerer'      , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9093, :name => 'Grimswarm giant sorceress'     , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9094, :name => 'Grimswarm giant ranger'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9095, :name => 'Grimswarm giant warrior'       , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9096, :name => 'Grimswarm giant elementalist'  , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9097, :name => 'Grimswarm giant mage'          , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9098, :name => 'Grimswarm giant wizard'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9099, :name => 'Grimswarm giant raider'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9100, :name => 'Grimswarm giant acolyte'       , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9101, :name => 'Grimswarm giant guard'         , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9102, :name => 'Grimswarm giant paladin'       , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9103, :name => 'Grimswarm giant battlemage'    , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9104, :name => 'Grimswarm giant archer'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9105, :name => 'Grimswarm giant skirmisher'    , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9106, :name => 'Grimswarm giant scout'         , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9107, :name => 'Grimswarm giant shaman'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9108, :name => 'Grimswarm giant warchief'      , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9109, :name => 'Grimswarm giant pillager'      , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9110, :name => 'Grimswarm giant marauder'      , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9111, :name => 'Grimswarm giant cleric'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9112, :name => 'Grimswarm giant initiate'      , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9113, :name => 'Grimswarm giant dissembler'    , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9114, :name => 'Grimswarm giant barbarian'     , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9115, :name => 'Grimswarm giant fighter'       , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9116, :name => 'Grimswarm giant scourge'       , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9117, :name => 'Grimswarm giant hunter'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9118, :name => 'Grimswarm giant destroyer'     , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9119, :name => 'Grimswarm giant witch'         , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9120, :name => 'Grimswarm giant wrathbringer'  , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9121, :name => 'Grimswarm giant adept'         , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9122, :name => 'Grimswarm giant zealot'        , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+    { :id =>9123, :name => 'Grimswarm giant huntmistress'  , :level =>999 , :undead => false, :noncorp => false, :hated => true,  :skin => 'none' },
+
+    # Reim
+    { :id =>9201, :name => 'Shopkeeper'                    , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9202, :name => 'Innkeeper'                     , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9203, :name => 'Butler'                        , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9204, :name => 'Bartender'                     , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9205, :name => 'Patrol Leader'                 , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9206, :name => 'Bandit Lord'                   , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9207, :name => 'Bandit Lady'                   , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9208, :name => 'Gypsy Queen'                   , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9209, :name => 'Gypsy King'                    , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9210, :name => 'Knight Captain'                , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9211, :name => 'Guard Captain'                 , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9212, :name => 'Wall Captain'                  , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9213, :name => 'Drill Sergeant'                , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9214, :name => 'Stable Hostler'                , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9215, :name => 'Dungeon Master'                , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9216, :name => 'Master Torturer'               , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9217, :name => 'Cook'                          , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9218, :name => 'Foreign Dignitary'             , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9219, :name => 'Royal Prince'                  , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9220, :name => 'Royal Princess'                , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9221, :name => 'Royal Jester'                  , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9222, :name => 'Emperor'                       , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9223, :name => 'Empress'                       , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9224, :name => 'ethereal swordswoman'          , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9225, :name => 'ethereal swordsman'            , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9226, :name => 'ethereal villager'             , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9227, :name => 'ethereal commoner'             , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9228, :name => 'ethereal peasant'              , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9229, :name => 'unworldly royal guard'         , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9230, :name => 'unworldly noble'               , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9231, :name => 'unworldly guest'               , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9232, :name => 'unworldly visitor'             , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9233, :name => 'unworldly steward'             , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9234, :name => 'unworldly stewardess'          , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9235, :name => 'unworldly slave'               , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9236, :name => 'ethereal madman'               , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9237, :name => 'ethereal madwoman'             , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9238, :name => 'ethereal guardsman'            , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9239, :name => 'ethereal guardswoman'          , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9240, :name => 'celestial juggler'             , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9241, :name => 'ghostly bandit'                , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9242, :name => 'ghostly waylayer'              , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9243, :name => 'celestial nomad'               , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9244, :name => 'ghostly highwayman'            , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9245, :name => 'ghostly highwaywoman'          , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9246, :name => 'ghostly marauder'              , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9247, :name => 'ethereal squire'               , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9248, :name => 'unworldly maid'                , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9249, :name => 'unworldly servant'             , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9250, :name => 'ethereal denizen'              , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9251, :name => 'unworldly royal knight'        , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9252, :name => 'ethereal knight'               , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9253, :name => 'celestial dancer'              , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9254, :name => 'ethereal townsman'             , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9255, :name => 'ethereal townswoman'           , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9256, :name => 'ethereal traveller'            , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9257, :name => 'ethereal inmate'               , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9258, :name => 'ethereal prisoner'             , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+    { :id =>9259, :name => 'ethereal lunatic'              , :level =>999 , :undead => true,  :noncorp => true,  :hated => false, :skin => 'none' },
+
+    # Bandits
+    # ^(?:seasoned )?(?:dwarven|elven|halfling|erithian|human|giantman|half\-krolvin|gnomish|half\-elven) (?:thief|rogue|bandit|mugger|outlaw|highwayman|marauder|brigand|thug|robber)
+]
+
+# To do: wl-lyserian, wl-graveyard, wl-darkstone, wl-coastalcliffs, wl-catacombs, wl-broken
+areas_to_add_or_update = [
+    #
+    # EN - Ta'vaalor cemetary
+    #
+    {
+      :id          => 1,
+      :start       => 5834,
+      :boundaries  => [5833,10685,10694],
+      :creatures   => [9,12,26,36,38,55,64]
+    },
+
+    #
+    # EN - Ta'Illistim locations added as I needed them
+    #
+
+    # Gyldemar Forest
+    {
+      :id          => 2,
+      :start       => 4757,
+      :boundaries  => [4737],
+      :creatures   => [302, 309, 315]
+    },
+
+    # Teorainn Dale
+    {
+      :id          => 3,
+      :start       => 1643,
+      :boundaries  => [1697, 1704, 1649, 547],
+      :creatures   => [250, 271],
+    },
+
+    # Maernstrike Caverns
+    {
+      :id          => 4,
+      :start       => 4988,
+      :boundaries  => [4960],
+      :creatures   => [316, 355],
+    },
+
+    # Gyldemar Forest
+    {
+      :id          => 5,
+      :start       => 4740,
+      :boundaries  => [4737],
+      :creatures   => [302,309,315]
+    },
+
+    #
+    # Icemule - Trail
+    #
+
+    # White Ice Lake - Ice Caves. Titans and Guardians
+    {
+      :id          => 6,   
+      :start       => 3474,
+      :boundaries  => [3464],
+      :creatures   => [272, 289],
+    },
+
+    #
+    # Icemule - NES gates
+    #
+
+    # Northern FB - trolls and giants
+    {
+      :id          => 7,
+      :start       => 3254,
+      :boundaries  => [3253,3260,3261,3262,3263],
+      :creatures   => [243, 303],
+    },
+
+    # Southern FB - only trolls and guardians
+    {
+      :id          => 8,
+      :start       => 3243,
+      :boundaries  => [5519,14601,3253,3260,3261,3262,3263,3242],
+      :creatures   => [243, 272],
+    },
+
+    # All FB
+    {
+      :id          => 9,
+      :start       => 3243,
+      :boundaries  => [3242],
+      :creatures   => [243, 257, 272, 303],
+    },
+
+    # FB - Trench
+    {
+      :id          => 10,
+      :start       => 3261,
+      :boundaries  => [5519,14601,3253,3260,3261,3262,3263,3254,3259, 3258, 3257],
+      :creatures   => [272], # We only care about the skelal ice trolls, really
+    },
+
+    # Ice plains - storm giants
+    {
+      :id          => 11,
+      :start       => 3294,
+      :boundaries  => [3282],
+      :creatures   => [241, 272, 313],
+    },
+
+    # Ice plains - tundra giants
+    {
+      :id          => 12,
+      :start       => 3264,
+      :boundaries  => [3239, 3294],
+      :creatures   => [241, 272, 280],
+    },
+
+    #
+    # Cavernhold - I didn't bother.
+    #
+
+    #
+    # Darkstone
+    #
+
+    #
+    # Mineroad
+    #
+    # coyote that has established a territory in Liath Bheinn and Aillidh Brae near Wehnimer's Landing
+    {
+      :id          => 13,
+      :start       => 8031,
+      :boundaries  => [8029, 8036],
+      :creatures   => [62],
+    },
+
+    # Liath Bheinn - Are Krolvin here now, too?
+    {
+      :id          => 14,
+      :start       => 8056,
+      :boundaries  => [8067, 8044],
+      :creatures   => [129, 151],
+    },
+
+    # The Slopes
+    {
+      :id          => 15,
+      :start       => 4262,
+      :boundaries  => [4214, 8143, 8151],
+      :creatures   => [95, 100, 142, 148, 180],
+    },
+
+    # Goblins and lesser orcs
+    {
+      :id          => 16,
+      :start       => 4200,
+      :boundaries  => [4196, 4209, 8194, 8193, 4209, 7996, 7997],
+      :creatures   => [28, 73],
+    },
+
+    # Thraks and manticores
+    {
+      :id          => 17,
+      :start       => 4342,
+      :boundaries  => [8037, 8031, 4266, 4208, 4302, 4214],
+      :creatures   => [91, 95],
+    },
+
+    # Grey orcs
+    {
+      :id          => 18,
+      :start       => 8037,
+      :boundaries  => [8027, 8045],
+      :creatures   => [121],
+    },
+
+    # Kobold mines
+    {
+      :id          => 19,
+      :start       => 7997,
+      :boundaries  => [7993],
+      :creatures   => [8],
+    },
+
+    # Wolves' Den
+    {
+      :id          => 20,
+      :start       => 8228,
+      :boundaries  => [8226, 8274],
+      :creatures   => [124, 171],
+    },
+
+    # Luinne Bheinn
+    {
+      :id          => 21,
+      :start       => 8074,
+      :boundaries  => [8071, 8125],
+      :creatures   => [209, 213, 216, 220],
+    },
+
+    # Dubh Brugh - the secret passage here isn't mapped, so no need to exclude it.
+    {
+      :id          => 22,
+      :start       => 8132,
+      :boundaries  => [8141, 8093],
+      :creatures   => [189],
+    },
+
+    # Crystal golems
+    {
+      :id          => 23,
+      :start       => 8186,
+      :boundaries  => [8163, 8180],
+      :creatures   => [107],
+    },
+
+    # Spiders, worms, and some overflow
+    {
+      :id          => 24,
+      :start       => 8166,
+      :boundaries  => [4300, 4322, 4311, 8181],
+      :creatures   => [19, 48, 89, 97],
+    },
+
+    # Nippers, I'm told
+    {
+      :id          => 25,
+      :start       => 4312,
+      :boundaries  => [4311],
+      :creatures   => [35],
+    },
+
+    #
+    # Danjirland
+    #
+
+    # Steel golems
+    {
+      :id          => 26,
+      :start       => 7826,
+      :boundaries  => [2823],
+      :creatures   => [188],
+    },
+
+    # Volcano
+    {
+      :id          => 27,
+      :start       => 4125,
+      :boundaries  => [4121, 7902, 8141],
+      :creatures   => [70, 144],
+    },
+
+    # Bone golems and ghost wovles
+    {
+      :id          => 28,
+      :start       => 7782,
+      :boundaries  => [7774],
+      :creatures   => [85, 146],
+    },
+
+    # Tree spirits
+    {
+      :id          => 29,
+      :start       => 1210,
+      :boundaries  => [7873, 1209, 1217, 7893],
+      :creatures   => [226],
+    },
+
+    # Zombies
+    {
+      :id         => 30,
+      :start      => 7874,
+      :boundaries => [7873],
+      :creatures  => [207]
+    },
+
+    # Trolls, bears, orc, ogres. Someone will probably complain I group all of
+    # these together, but that's how I prefer to hunt this space.
+    {
+      :id          => 31,
+      :start       => 7761,
+      :boundaries  => [473, 3562, 1210, 2578, 7775, 7776],
+      :creatures   => [118, 120, 121, 130, 143, 1633],
+    },
+
+    # War trolls and mountain ogres
+    {
+      :id          => 31,
+      :start       => 1199,
+      :boundaries  => [473, 3562, 1210, 2578, 7775, 7776],
+      :creatures   => [151, 180],
+    },
+
+    # Glacier - trolls are a stretch for this area.
+    {
+      :id          => 32,
+      :start       => 3617,
+      :boundaries  => [2570, 7866, 2557],
+      :creatures   => [289, 293, 303],
+    },
+
+    # Trolls and crones
+    {
+      :id          => 33,
+      :start       => 7871,
+      :boundaries  => [7869],
+      :creatures   => [243, 293],
+    },
+
+    #
+    # Spider temple
+    #
+
+    # Servants and spiders
+    {
+      :id          => 34,
+      :start       => 8324,
+      :boundaries  => [8280, 8326],
+      :creatures   => [192, 185],
+    },
+
+    # Priests and priestesses, mammoth arachnids, acolytes
+    {
+      :id          => 35,
+      :start       => 8327,
+      :boundaries  => [8325, 8318],
+      :creatures   => [199, 223, 224, 253],
+    },
+
+    # Supposedly acolytes, but I've seen priest(esse)s there. No arachnids, though?
+    {
+      :id          => 36,
+      :start       => 8340,
+      :boundaries  => [8337],
+      :creatures   => [199, 223, 224],
+    },
+
+    #
+    # Wentoph
+    #
+
+    # Lower plateau
+    {
+      :id          => 37,
+      :start       => 6151,
+      :boundaries  => [6152, 6135],
+      :creatures   => [407, 409],
+    },
+
+    # Upper plateau
+    {
+      :id          => 38,
+      :start       => 6174,
+      :boundaries  => [6141, 6191],
+      :creatures   => [411, 407],
+    },
+
+    # Maze - entry
+    {
+      :id          => 39,
+      :start       => 6191,
+      :boundaries  => [6200],
+      :creatures   => [415, 411],
+    },
+
+    # Maze - deep - omits behind the door
+    {
+      :id          => 40,
+      :start       => 6200,
+      :boundaries  => [6228, 6199, 6364],
+      :creatures   => [415, 420],
+    },
+
+    #
+    # Stone Valley and Stronghold (Map boundary: 3562)
+    #
+
+    # Bowels proper
+    {
+      :id          => 41,
+      :start       => 8397,
+      :boundaries  => [3839, 8375],
+      :creatures   => [432, 427, 438, 442, 441, 422, 469],
+    },
+
+    # Bowels northern tunnels
+    {
+      :id          => 42,
+      :start       => 8375,
+      :boundaries  => [8374],
+      :creatures   => [432, 427, 422, 469],
+    },
+
+    # Illoke, mastiffs
+    {
+      :id          => 43,
+      :start       => 3580,
+      :boundaries  => [3578, 8374, 3914],
+      :creatures   => [390, 402, 392],
+    },
+
+    # Illoke, mastiffs - behind the door
+    {
+      :id          => 44,
+      :start       => 3924,
+      :boundaries  => [3584, 8374, 3914],
+      :creatures   => [390, 402],
+    },
+
+    # Red bears
+    {
+      :id          => 45,
+      :start       => 3563,
+      :boundaries  => [3562, 3566],
+      :creatures   => [154],
+    },
+
+    # Mountain lions
+    {
+      :id          => 46,
+      :start       => 3857,
+      :boundaries  => [3576, 3575, 3565],
+      :creatures   => [173],
+    },
+
+    # Stone trolls and giants
+    {
+      :id          => 47,
+      :start       => 3729,
+      :boundaries  => [3893, 3578, 3576],
+      :creatures   => [378, 384],
+    },
+
+    # Stone trolls and giants - limit the ledge
+    {
+      :id          => 48,
+      :start       => 3729,
+      :boundaries  => [3893, 3578, 3576, 3789],
+      :creatures   => [378, 384],
+    },
+
+    #
+    # Outside gates
+    #
+
+    # Grubs & gremlins
+    {
+      :id          => 49,
+      :start       => 6114,
+      :boundaries  => [6109, 6119, 7918, 7919],
+      :creatures   => [13, 66],
+    },
+
+    # Hob village and surrounding area. May want to make two smaller areas.
+    {
+      :id          => 50,
+      :start       => 3771,
+      :boundaries  => [433, 6726, 3774, 6694, 6703, 6108, 6737],
+      :creatures   => [40, 43],
+    },
+
+    # Hill trolls - should colussus be excluded?
+    {
+      :id          => 51,
+      :start       => 469,
+      :boundaries  => [474, 465, 6854],
+      :creatures   => [148],
+    },
+
+    # Forest trolls
+    {
+      :id          => 52,
+      :start       => 457,
+      :boundaries  => [456],
+      :creatures   => [118],
+    },
+
+    # Graendlor Pasture - gaks, kobold sheperd
+    {
+      :id          => 53,
+      :start       => 6751,
+      :boundaries  => [6762, 454],
+      :creatures   => [31, 46, 42],
+    },
+
+    # Ocoma vale - hob, hob shaman, mong hobs, spotted lynx
+    {
+      :id          => 54,
+      :start       => 6777,
+      :boundaries  => [6737, 6763, 6786],
+      :creatures   => [65, 80, 77, 40],
+    },
+
+    # Velnalin, kobold, rolton
+    {
+      :id          => 55,
+      :start       => 217,
+      :boundaries  => [6957, 6958, 3769, 450, 454, 439, 291, 221, 219, 6259, 6321, 14630, 14629, 14619, 23709, 23193],
+      :creatures   => [49, 8, 11],
+    },
+
+    # Squirrels, kobolds, rats
+    {
+      :id          => 56,
+      :start       => 6288,
+      :boundaries  => [6286],
+      :creatures   => [7, 29, 8],
+    },
+
+    # Squirrels, kobolds, big ugly kobolds
+    {
+      :id          => 57,
+      :start       => 6276,
+      :boundaries  => [6262, 6284],
+      :creatures   => [17, 29, 8],
+    },
+
+
+    # ... dark orc half ...
+    {
+      :id          => 59,
+      :start       => 6909,
+      :boundaries  => [6888],
+      :creatures   => [98, 108],
+    },
+
+    # ... wraith half ...
+    {
+      :id          => 60,
+      :start       => 6889,
+      :boundaries  => [6888, 6897],
+      :creatures   => [98, 138],
+    },
+
+    # Lesser orcs and lesser burrow orcs
+    {
+      :id          => 61,
+      :start       => 7944,
+      :boundaries  => [7949, 3757, 14969, 24671],
+      :creatures   => [73, 81],
+    },
+
+    # Greater burrow orcs
+    {
+      :id          => 62,
+      :start       => 7964,
+      :boundaries  => [7965, 7949, 24671],
+      :creatures   => [87],
+    },
+
+    # Thunder trolls, wind witches, pumas, ogre warriors
+    {
+      :id          => 63,
+      :start       => 6798,
+      :boundaries  => [6784],
+      :creatures   => [134, 155, 179, 187],
+    },
+
+    # Gnome caves
+    {
+      :id          => 64,
+      :start       => 6694,
+      :boundaries  => [6693, 6706, 6715],
+      :creatures   => [19, 48, 34],
+    },
+
+    #
+    #  Upper trollfang
+    #
+
+    # Forest trolls - omits the swamp area
+    {
+      :id          => 65,
+      :start       => 8520,
+      :boundaries  => [8533, 1286, 8575, 1293, 8527, 8435, 8539, 7160],
+      :creatures   => [22, 62, 88, 118],
+    },
+
+    # Cockatrices and lesser orcs
+    {
+      :id          => 66,
+      :start       => 1283,
+      :boundaries  => [7156, 1281, 1288],
+      :creatures   => [69, 73],
+    },
+
+    # Gnoll workers and rangers. Guards can show up here?
+    {
+      :id          => 67,
+      :start       => 1293,
+      :boundaries  => [1292, 8546, 1295],
+      :creatures   => [99, 128],
+    },
+
+    # Gnoll rangers and thieves
+    {
+      :id          => 68,
+      :start       => 8556,
+      :boundaries  => [8564, 8555],
+      :creatures   => [111, 128],
+    },
+
+    # Werebear, darkwood, greater orc
+    {
+      :id          => 69,
+      :start       => 8511,
+      :boundaries  => [8435],
+      :creatures   => [88, 103, 109],
+    },
+
+    # Wolfshades
+    {
+      :id          => 70,
+      :start       => 8461,
+      :boundaries  => [8471, 8460],
+      :creatures   => [137],
+    },
+
+    # Vereri
+    {
+      :id          => 71,
+      :start       => 8471,
+      :boundaries  => [8507, 8470],
+      :creatures   => [174]
+    },
+
+    # Dark shamblers
+    {
+      :id         => 72,
+      :start      => 8444,
+      :boundaries => [8461, 8440, 8450],
+      :creatures  => [157]
+    },
+
+    # Storm and skeletal giants
+    {
+      :id         => 73,
+      :start      => 8450,
+      :boundaries => [8447, 8458],
+      :creatures  => [313,270]
+    },
+
+    # Grey orcs
+    {
+      :id         => 74,
+      :start      => 8436,
+      :boundaries => [8443, 8434, 8508],
+      :creatures  => [121]
+    },
+
+    #
+    # Lyserian Hills
+    #
+
+    # Fire rats and fire cats
+    {
+      :id         => 75,
+      :start      => 6385,
+      :boundaries => [6395, 6384],
+      :creatures  => [145, 170]
+    },
+
+    # Fire rats, fire cats, striped warcats
+    {
+      :id         => 76,
+      :start      => 6385,
+      :boundaries => [6384, 6405],
+      :creatures  => [145, 170, 189]
+    },
+
+    #
+    # Solhaven trail
+    #
+
+    # Large ogres
+    {
+      :id         => 77,
+      :start      => 1344,
+      :boundaries => [1356, 1339, 9326],
+      :creatures  => [130]
+    },
+
+    # Swamp trolls
+    {
+      :id         => 78,
+      :start      => 1356,
+      :boundaries => [1373, 1355],
+      :creatures  => [125]
+    },
+
+    # Swamp trolls and large ogres
+    {
+      :id         => 79,
+      :start      => 1344,
+      :boundaries => [1373, 1339, 9326],
+      :creatures  => [130, 125]
+    },
+
+    # greater orcs - #1
+    {
+      :id         => 80,
+      :start      => 1300,
+      :boundaries => [1295, 1314],
+      :creatures  => [88],
+    },
+
+    #  greater orcs - #2
+    {
+      :id         => 81,
+      :start      => 1381,
+      :boundaries => [1380, 9377, 1416, 3897],
+      :creatures  => [88],
+    },
+
+    # Werebears
+    {
+      :id          => 82,
+      :start       => 9356,
+      :boundaries  => [9355],
+      :creatures   => [103],
+    },
+
+    # mist wraiths and revenants
+    {
+      :id          => 83,
+      :start       => 9355,
+      :boundaries  => [9356, 9343],
+      :creatures   => [64, 55],
+    },
+
+    # zombie rolton
+    {
+      :id          => 84,
+      :start       => 9342,
+      :boundaries  => [9337, 9344],
+      :creatures   => [16],
+    },
+
+    # Hobgoblins
+    {
+      :id          => 85,
+      :start       => 1375,
+      :boundaries  => [9338, 1381, 1369],
+      :creatures   => [40],
+    },
+
+    # Spotted lynx - some overlap with urghs
+    {
+      :id          => 86,
+      :start       => 1330,
+      :boundaries  => [3891, 1321, 9319, 1340],
+      :creatures   => [77],
+    },
+
+    # Urghs - a few rooms overlap with lynx's ... reduce?
+    {
+      :id          => 87,
+      :start       => 1318,
+      :boundaries  => [1314, 1328],
+      :creatures   => [58],
+    },
+
+    # Varunar - corpses and roa'ters
+    {
+      :id          => 88,
+      :start       => 13988,
+      :boundaries  => [13986, 14037],
+      :creatures   => [262, 321],
+    },
+
+    # Varunar - warriors and warhorses. Tsoran lists spectral monks as well, but I've NEVER seen one here.
+    {
+      :id          => 89,
+      :start       => 14053,
+      :boundaries  => [14036, 15991],
+      :creatures   => [301, 323],
+    },
+
+    # Varunar - phantasma... isn't there something else here as well?
+    {
+      :id          => 90,
+      :start       => 16817,
+      :boundaries  => [14070],
+      :creatures   => [328],
+    },
+
+    #
+    # Solhaven outlands
+    #
+
+    # baslisks (some dobrems as well)
+    {
+      :id          => 91,
+      :start       => 5519,
+      :boundaries  => [5520, 5495],
+      :creatures   => [196],
+    },
+
+    # dobrems
+    {
+      :id          => 92,
+      :start       => 5520,
+      :boundaries  => [5519, 14601], # 5480 is a no-cast room. Weapon users don't need to ignore it.
+      :creatures   => [235],
+    },
+
+    # Bresnahanini rolton
+    {
+      :id          => 93,
+      :start       => 5466,
+      :boundaries  => [5465, 5495, 13104],
+      :creatures   => [33],
+    },
+
+    #
+    # Solhaven North beach
+    #
+
+    # Fire guardians, firephantom, fire salamanders
+    {
+      :id          => 94,
+      :start       => 5167,
+      :boundaries  => [5166, 5178, 5180],
+      :creatures   => [144, 70, 37]
+    },
+
+    # Thraks and more
+    {
+      :id          => 95,
+      :start       => 5164,
+      :boundaries  => [5167, 5147],
+      :creatures   => [91, 95, 100, 134],
+    },
+
+    # spiders, spectres, and trolls
+    {
+      :id          => 96,
+      :start       => 5129,
+      :boundaries  => [5148, 5128],
+      :creatures   => [89, 143, 124],
+    },
+
+    # dark shamblers (and the rare sand beetle)
+    {
+      :id          => 97,
+      :start       => 5178,
+      :boundaries  => [5176, 5179],
+      :creatures   => [157, 269],
+    },
+
+    # Along with the caravansary - kobolds, coyotes, urghs
+    {
+      :id          => 98,
+      :start       => 5058,
+      :boundaries  => [5117, 5079, 9033, 5069, 5054],
+      :creatures   => [8, 54, 62, 58],
+    },
+
+    #
+    # Solhaven Caravansary
+    #
+
+    # Cyclops
+    {
+      :id          => 99,
+      :start       => 5368,
+      :boundaries  => [5363, 5379],
+      :creatures   => [227]
+    },
+
+    # Wood wights and rotting woodsman
+    {
+      :id          => 100,
+      :start       => 9033,
+      :boundaries  => [5063],
+      :creatures   => [190, 206]
+    },
+
+    # Urghs
+    {
+      :id          => 101,
+      :start       => 5364,
+      :boundaries  => [5368, 5077],
+      :creatures   => [58],
+    },
+
+    # Bog
+    {
+      :id          => 102,
+      :start       => 5069,
+      :boundaries  => [5068],
+      :creatures   => [93, 83, 105, 178, 133],
+    },
+
+    # Daggerbeaks
+    {
+      :id          => 103,
+      :start       => 5462,
+      :boundaries  => [4616, 5442, 5450],
+      :creatures   => [2],
+    },
+
+    #
+    # Foggy valley
+    #
+
+    # Ship wreck
+    {
+      :id          => 104,
+      :start       => 5207, # FIXME
+      :boundaries  => [5206],
+      :creatures   => [38, 76, 94],
+    },
+
+    # Pine Forest
+    {
+      :id          => 105,
+      :start       => 5213,
+      :boundaries  => [5211, 5267],
+      :creatures   => [62, 88, 118, 149],
+    },
+
+    # The Hills
+    {
+      :id          => 106,
+      :start       => 5269,
+      :boundaries  => [5266, 5287],
+      :creatures   => [155, 179],
+    },
+
+    # The Warrens
+    {
+      :id          => 107,
+      :start       => 5251,
+      :boundaries  => [5637, 5250],
+      :creatures   => [203],
+    },
+
+    # The Lake
+    {
+      :id          => 108,
+      :start       => 5323,
+      :boundaries  => [5331, 5298, 5339],
+      :creatures   => [195, 200, 321],
+    },
+
+    # Forest road
+    {
+      :id          => 109,
+      :start       => 5339,
+      :boundaries  => [5337, 5329, 5390],
+      :creatures   => [253, 329, 330, 331, 332],
+    },
+
+    # Bonespear
+    {
+      :id          => 110,
+      :start       => 5413,
+      :boundaries  => [5411, 13020],
+      :creatures   => [353, 360, 376],
+    },
+
+    # Foggy  Valley proper
+    {
+      :id          => 111,
+      :start       => 5636,
+      :boundaries  => [5644, 5268, 5323, 5297],
+      :creatures   => [217, 226, 244, 267, 285],
+    },
+
+    # Ruined temple and deep woods
+    {
+      :id          => 112,
+      :start       => 5297,
+      :boundaries  => [5296, 5307], # Some of these rooms are anti-magic. Need to check them.
+      :creatures   => [308],
+    },
+
+    # Beach - northern
+    {
+      :id          => 113,
+      :start       => 5210,
+      :boundaries  => [5213, 5264, 5225, 5207, 5124, 5128],
+      :creatures   => [27, 30, 60, 52, 68],
+    },
+
+    # Coastal woods - upper trail
+    {
+      :id          => 115,
+      :start       => 5225,
+      :boundaries  => [5223, 5228, 5251],
+      :creatures   => [54, 89, 130], # Lower trail creatures will wander up
+    },
+
+    # Coastal woods - lower trail
+    {
+      :id          => 116,
+      :start       => 5264,
+      :boundaries  => [5223, 5228, 5251, 5252],
+      :creatures   => [89, 108, 109, 158], # Upper trail creatures will wander down
+    },
+
+    # new areas
+    # Coastal cliffs - carrion worms and nymphs
+    {
+      :id          => 117,
+      :start       => 483,
+      :boundaries  => [481, 505, 7603, 498, 501],
+      :creatures   => [3, 30],
+    },
+
+    # WL graveyard - night hounds and moaning spirits
+    {
+      :id          => 118,
+      :start       => 7319,
+      :boundaries  => [7318, 4541],
+      :creatures   => [212, 240],
+    },
+
+    # WL graveyard - zombies
+    {
+      :id          => 119,
+      :start       => 4144,
+      :boundaries  => [4143, 4175],
+      :creatures   => [72],
+    },
+
+    # WL mineroad - thrak, manticore, grey orc
+    {
+      :id          => 120,
+      :start       => 4339,
+      :boundaries  => [8045, 4213, 23520, 8031],
+      :creatures   => [74, 95, 121],
+    },
+
+    # WL mineroad 2 - thrak, manticore
+    {
+      :id          => 121,
+      :start       => 4209,
+      :boundaries  => [4339,4208,8022,4302, 4267, 4214],
+      :creatures   => [74, 95],
+    },
+
+    # WL coastal cliffs - lesser red orcs
+    {
+      :id          => 122,
+      :start       => 7682,
+      :boundaries  => [520, 7734, 7706, 7703],
+      :creatures   => [82],
+    },
+    #  forest bendith in Gyldemar Forest near Ta'Illistim
+    {
+      :id          => 122,
+      :start       => 4740,
+      :boundaries  => [4739],
+      :creatures   => [315, 302, 309],
+    },
+
+    # three-toed tegu activity in Teorainn Dale near Ta'Illistim
+    {
+      :id          => 123,
+      :start       => 1633,
+      :boundaries  => [547, 1704, 1697, 1649],
+      :creatures   => [271],
+    },
+
+    # burgee and hunter troll in Teorainn Dale near Ta'Illistim.
+    {
+      :id          => 124,
+      :start       => 1649,
+      :boundaries  => [1648,1688],
+      :creatures   => [245, 250],
+    },
+
+    # a mountain troll in Noralgar Forest near Wehnimer's Landing
+    {
+      :id          => 125,
+      :start       => 6476,
+      :boundaries  => [6462,6518,13251,13260],
+      :creatures   => [134,163],
+    },
+
+    # cave troll that has established a territory in the crystal caves near Wehnimer's Landing.
+    {
+      :id          => 126,
+      :start       => 4322,
+      :boundaries  => [8181,8170,4334,4300,8172],
+      :creatures   => [143],
+    },
+
+    # War trolls and mountain ogres
+    {
+      :id          => 127,
+      :start       => 7818,
+      :boundaries  => [1196,1210,2578,4116,3562],
+      :creatures   => [151, 180, 120],
+    },
+
+    # dreadnought raptor that has established a territory in Gyldemar Forest near Ta'Illistim
+    {
+      :id          => 128,
+      :start       => 4804,
+      :boundaries  => [4802, 4832],
+      :creatures   => [335, 342],
+    },
+
+    #  coyote that has established a territory in the Lower Dragonsclaw near Wehnimer's Landing
+    {
+      :id          => 129,
+      :start       => 3608,
+      :boundaries  => [24671, 7966, 23833, 19919, 7949, 440, 3603, 4346, 24671, 7967, 4134, 4196],
+      :creatures   => [62],
+    },
+
+    # greater orc activity in the Upper Trollfang near Wehnimer's Landing
+    {
+      :id          => 130,
+      :start       => 8531,
+      :boundaries  => [8436,1293,1289,8432,8527,22427],
+      :creatures   => [62,88,118],
+    },
+    # great boar - the Slope
+    {
+      :id          => 131,
+      :start       => 4215,
+      :boundaries  => [4256,4221,4278, 4214],
+      :creatures   => [100],
+    },
+
+    # great boar that has established a territory in the Lysierian Hills near Wehnimer's Landing
+    {
+      :id          => 132,
+      :start       => 4267,
+      :boundaries  => [6385,4298,4266,6372],
+      :creatures   => [100,142],
+    },
+
+    # Spiders, worms, and some overflow
+    {
+      :id          => 24,
+      :start       => 8166,
+      :boundaries  => [4300, 4322, 4311, 8181],
+      :creatures   => [19, 48, 97],
+    },
+
+    # Spiders, worms, and some overflow
+    {
+      :id          => 133,
+      :start       => 4334,
+      :boundaries  => [4300, 4322, 4312, 8178, 8163],
+      :creatures   => [89],
+    },
+
+    # AB farm garden - tree spirits
+    {
+      :id          => 134,
+      :start       => 3100,
+      :boundaries  => [3126, 3101, 3091],
+      :creatures   => [226],
+    },
+
+    # AB farm orchard? - woodsman, farmhand, elder tree spirit
+    {
+      :id          => 135,
+      :start       => 3126,
+      :boundaries  => [3125],
+      :creatures   => [263, 286, 246],
+    },
+
+    # Forest trali
+    {
+      :id          => 136,
+      :start       => 10770,
+      :boundaries  => [4823, 4839, 4840],
+      :creatures   => [347, 340],
+    },
+
+    # Horned Vor'tag
+    {
+      :id          => 137,
+      :start       => 4794,
+      :boundaries  => [4903, 4793],
+      :creatures   => [354],
+    },
+
+    # Lesser faeroth
+    {
+      :id          => 138,
+      :start       => 4903,
+      :boundaries  => [4902],
+      :creatures   => [349, 363],
+    },
+]
+
+Creatures.init_db
+
+creatures_to_add_or_update.each{|critter|
+    Creatures.insert(
+        Creature.new(
+            critter[:id],
+            critter[:level],
+            critter[:name],
+            critter[:skin],
+            critter[:undead],
+            critter[:noncorp],
+            critter[:hated]
+        )
+    );
+}
+
+Areas.init_db
+
+i = 0
+
+areas_to_add_or_update.each{|area|
+    Areas.delete(area[:id])
+
+    Areas.insert(
+        Area.new(
+            area[:id],
+            area[:start],
+            area[:boundaries],
+            area[:creatures]
+        )
+    );
+    i += 1
+}
+
+echo "Added #{i} areas"
+
+BountyDatabase.close_db()

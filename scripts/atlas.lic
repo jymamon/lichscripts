@@ -1,0 +1,353 @@
+=begin
+
+    Creatures and hunting areas atlas.  Requires atlas_data.db to also
+    be downloaded and must be ;trust'ed so it can use that data.
+
+     author: Jymamon (gs4-jymamon@hotmail.com)
+       game: Gemstone
+       tags: creature,critter,hunting
+    version: 2016.12.31.01
+
+    History:
+        2016.12.31.01 - Initial release.
+
+=end
+
+quiet_exit
+
+# -----------------------------------------------------------------------------
+# Require the helper libraries as I'm tired of C+P many of the same code blocks.
+# -----------------------------------------------------------------------------
+if File.file?("#{$script_dir}/moduleloader.lic")
+    load("#{$script_dir}/moduleloader.lic")
+else
+    echo "\n\nmoduleloader.lic is required:\n;repos download moduleloader.lic;repos moduleloader.lic\n\n."
+    exit
+end
+
+ModuleLoader.load_support_script("AtlasDatabase", "2016.12.31.01")
+ModuleLoader.load_support_script("JGTK", "2016.12.31.01")
+include JGTK
+
+class Atlas
+    class AreasPage
+        attr_reader :page
+
+        def initialize
+            @page = NotebookPage.new("Areas")
+
+            add_areas_list(TablePosition.new(0, 10,  0,  1))
+            add_activate_button(TablePosition.new(6,  8, 11, 12))
+            build_display_fields
+        end
+
+        def add_areas_list(position)
+            @page.add_widget(build_areas_list, position);
+        end
+
+
+        def add_activate_button(position)
+            @activate_button = Button.new("Activate")
+            @page.add_widget(@activate_button, position)
+
+            activate_button_proc = Proc.new {|this, text|
+                UserVars.op['hunting_room_id']    = @start_text.text
+                UserVars.op['hunting_boundaries'] = @boundary_text.text
+                UserVars.op['targets']            = @targets_text.text
+            }
+
+            @activate_button.onclick(activate_button_proc)
+        end
+
+        def build_areas_list
+            @dropdown = ComboBox.new("Areas", Array.new)
+
+            Areas.all().each{|a|
+               @dropdown.add_option("#{'%04d' % a.id}: #{a.region}", false)
+            }
+           
+            @dropdown.set_active(0);
+
+            @dropdown.onchange(
+                Proc.new{|active|
+                    active =~ /^0*([1-9][0-9]*): (.*)$/;
+                    area = Areas.find_by_id($1);
+                    @id_text.text       = "#{'%04d' % area.id}"
+                    @start_text.text    = "#{area.start}"
+                    @boundary_text.text = "#{area.boundaries.join(", ")}"
+                    @targets_text.text  = "#{area.creatures.map{|c| c.name}.join(",")}"
+                });
+
+            return @dropdown;
+        end
+
+        def build_display_fields
+            @page.add_widget(Label.new("ID"),                  TablePosition.new(0, 2, 1, 2))
+            @page.add_widget(Label.new("Start"),               TablePosition.new(0, 2, 2, 3))
+            @page.add_widget(Label.new("Boundaries"),          TablePosition.new(0, 2, 3, 4))
+            @page.add_widget(Label.new("Targets"),             TablePosition.new(0, 2, 4, 5))
+
+            @page.add_widget(@id_text       = TextBox.new(""), TablePosition.new(2, 10, 1, 2))
+            @page.add_widget(@start_text    = TextBox.new(""), TablePosition.new(2, 10, 2, 3))
+            @page.add_widget(@boundary_text = TextBox.new(""), TablePosition.new(2, 10, 3, 4))
+            @page.add_widget(@targets_text  = TextBox.new(""), TablePosition.new(2, 10, 4, 5))
+        end
+
+    end
+
+    class CreaturesPage
+        attr_reader :page, :mode
+
+        def initialize
+            @page = NotebookPage.new("Creatures", 12, 10)
+
+            add_creatures_list(    TablePosition.new(0, 10,  0,  1))
+            add_delete_button(     TablePosition.new(2,  4, 11, 12))
+            add_new_cancel_button( TablePosition.new(4,  6, 11, 12))
+            add_edit_save_button(  TablePosition.new(6,  8, 11, 12))
+
+            build_display_fields
+            @mode = :display
+
+        end
+
+        def build_creatures_list
+            @dropdown = ComboBox.new("Creatures", Array.new)
+
+            Creatures.all().sort{|a, b| a.name.downcase <=> b.name.downcase}.each{|c|
+                @dropdown.add_option("#{c.name}", false)
+            }
+
+            @dropdown.onchange(
+                Proc.new{|active|
+                    creature = Creatures.find_by_name(active, true).first;
+
+                    @id_text.text       = "#{'%04d' % creature.id}"
+                    @name_text.text     = creature.name
+                    @is_undead.checked  = creature.undead
+                    @is_noncorp.checked = creature.noncorp
+                    @is_hated.checked   = creature.hated
+
+                    @level_text.text    = "#{creature.level==999 ? 'scaling' : creature.level}"
+                    @skin_text.text     = "#{creature.skin || 'none'}"
+
+                    @name_text.enabled  = false
+                    @is_undead.enabled  = false
+                    @is_noncorp.enabled = false
+                    @is_hated.enabled   = false
+                    @level_text.enabled = false
+                    @skin_text.enabled  = false
+                });
+
+
+            @dropdown.set_active(0);
+
+            return @dropdown;
+        end
+
+        def build_display_fields
+            @page.add_widget(Label.new("ID"),                            TablePosition.new(0, 1, 1, 2))
+            @page.add_widget(Label.new("Name"),                          TablePosition.new(0, 1, 2, 3))
+            @page.add_widget(Label.new("Level"),                         TablePosition.new(0, 1, 3, 4))
+            @page.add_widget(Label.new("Type"),                          TablePosition.new(0, 1, 4, 5))
+            @page.add_widget(Label.new("Skin"),                          TablePosition.new(0, 1, 5, 6))
+
+            @page.add_widget(@id_text    = TextBox.new(""),              TablePosition.new(1, 10, 1, 2))
+            @page.add_widget(@name_text  = TextBox.new(""),              TablePosition.new(1, 10, 2, 3))
+            @page.add_widget(@level_text = TextBox.new(""),              TablePosition.new(1, 10, 3, 4))
+            @page.add_widget(@is_undead  = CheckButton.new("Undead?"),   TablePosition.new(1,  4, 4, 5))
+            @page.add_widget(@is_noncorp = CheckButton.new("Non-Corp?"), TablePosition.new(4,  8, 4, 5))
+            @page.add_widget(@is_hated   = CheckButton.new("Hated?"),    TablePosition.new(8, 10, 4, 5))
+            @page.add_widget(@skin_text  = TextBox.new(""),              TablePosition.new(1, 10, 5, 6))
+        end
+
+        def add_creatures_list(position)
+            @page.add_widget(build_creatures_list, position);
+        end
+
+        def add_delete_button(postion)
+            delete_button_proc = Proc.new {
+                creature_to_delete = @id_text.text.to_i
+                Creatures.delete(creature_to_delete)
+                @dropdown.remove_option();
+            }
+
+            # Enable once ComboBox.remove_option() is fixed.
+            @page.add_widget(delete_button = Button.new("Delete", delete_button_proc), postion)
+        end
+
+        def add_edit_save_button(position)
+            @edit_save_button = Button.new("Edit")
+            @page.add_widget(@edit_save_button, position)
+
+            edit_save_button_proc = Proc.new {|this, text|
+                if @mode == :display
+                    self.start_edit
+
+                elsif @mode == :edit
+                    self.save_edit
+
+                elsif @mode == :new
+                    self.save_new
+
+                else
+                    echo "You messed that up."
+
+                end
+            }
+
+            @edit_save_button.onclick(edit_save_button_proc)
+        end
+
+        def add_new_cancel_button(position)
+            @new_cancel_button = Button.new("New")
+            @page.add_widget(@new_cancel_button, position)
+
+            new_cancel_button_proc = Proc.new{|this, text|
+                if @mode == :display
+                    self.start_new
+
+                elsif @mode == :edit
+                    self.cancel_edit
+
+                elsif @mode == :new
+                    self.cancel_new
+
+                else
+                    echo "You messed that up."
+
+                end
+            }
+
+            @new_cancel_button.onclick(new_cancel_button_proc)
+        end
+
+        def cancel_edit
+            @name_text.enabled  = false
+            @is_undead.enabled  = false
+            @is_noncorp.enabled = false
+            @is_hated.enabled   = false
+            @level_text.enabled = false
+            @skin_text.enabled  = false
+
+            @edit_save_button.text = "Edit"
+            @new_cancel_button.text = "New"
+
+            @dropdown.set_active(@dropdown.selected);
+            @mode = :display
+        end
+
+        def cancel_new
+            self.cancel_edit
+            @dropdown.set_active(0);
+        end
+
+        def save_edit
+            edited_creature = Creature.new(
+                @id_text.widget.text.to_i,
+                @level_text.widget.text.to_i,
+                @name_text.text,
+                @skin_text.text,
+                @is_undead.checked?,
+                @is_noncorp.checked?,
+                @is_hated.checked?)
+            begin
+                Creatures.insert(edited_creature)
+            rescue
+                echo "Failed!\n#{$!.backtrace.join("\n\t")}"
+            end
+
+            cancel_edit
+        end
+
+        def save_new
+            new_id = -1;
+
+            if ( @level_text.widget.text!="Scaling" )
+                new_id = Creatures.ids.find_all{|i| i < 9000}.max + 1
+            else
+                new_id = Creatures.ids.max + 1
+            end
+
+            begin
+                edited_creature = Creature.new(
+                    new_id,
+                    @level_text.widget.text.to_i,
+                    @name_text.text,
+                    @skin_text.text,
+                    @is_undead.checked?,
+                    @is_noncorp.checked?,
+                    @is_hated.checked?)
+
+                begin
+                    Creatures.insert(edited_creature)
+                    @dropdown.add_option(@name_text.text, true)
+                rescue
+                    echo "Failed!\n#{$!.backtrace.join("\n\t")}"
+                end
+            rescue
+                echo "Invalid creature!"
+            end
+
+            cancel_edit
+        end
+
+        def start_edit
+            @name_text.enabled  = true
+            @is_undead.enabled  = true
+            @is_noncorp.enabled = true
+            @is_hated.enabled   = true
+            @level_text.enabled = true
+            @skin_text.enabled  = true
+
+            @edit_save_button.text = "Save"
+            @new_cancel_button.text = "Cancel"
+            @mode = :edit
+        end
+
+        def start_new
+            start_edit
+
+            @id_text.text       = "Unassigned"
+            @name_text.text     = ""
+            @is_undead.checked  = false
+            @is_noncorp.checked = false
+            @is_hated.checked   = false
+
+            @level_text.text    = ""
+            @skin_text.text     = ""
+
+            @dropdown.set_active(-1)
+            @mode = :new
+        end
+    end
+
+    attr_reader :window
+
+    def initialize
+        @window = NotebookWindow.new("test app", 400, 300)
+        pages = [
+            AreasPage::new.page,
+            CreaturesPage::new.page
+        ];
+
+        pages.each{|p|
+            add_exit_to_page(p)
+            @window.add_page(p)
+        }
+    end
+
+    def run
+        @window.run
+    end
+
+    def add_exit_to_page(page)
+        exit_button_proc = Proc.new {
+            @window.action = :exit
+        }
+
+        page.add_widget(Button.new("Exit", exit_button_proc), TablePosition.new(10, 12, 11, 12))
+    end
+end
+
+Atlas.new.run()

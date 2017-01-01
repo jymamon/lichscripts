@@ -1,0 +1,461 @@
+=begin
+    jgtk - Jymamon's GTK wrapper because GTK is annoying
+
+    This is a reusable module for other scripts.  You don't need to
+    run it directly in any fashion.
+
+    It should be noted that this isn't intended to expose all of
+    GTK.  Use GTK directly if you need that.  This is an attempt to
+    make simple windows simpler because I hate GUI work.
+
+    author: Jymamon (gs4-jymamon@hotmail.com)
+       game: Gemstone
+       tags: utility
+    version: 2016.12.31.01
+       repo: https://github.com/jymamon/lichscripts
+    
+    history:
+        2016.12.31.01 - Created. Subject to sweeping changes still.
+=end
+
+if $jgtk_development
+    # Before exiting, undef the class so we can redefine them next run.
+    before_dying {
+        JGTK.constants.each{|c|
+            JGTK.send(:remove_const, c)
+        }
+    }
+end
+
+module JGTK
+    # Curse interpetted languages for forward declarations like this being required.
+    class Widget
+    end
+
+    class Table < Widget
+    end
+
+    ## ------------------------------------------------------------------------
+    # Used for my auto-loader snippet
+    #   if File.file?("#{$script_dir}/moduleloader.lic")
+    #       load("#{$script_dir}/moduleloader.lic")
+    #   else
+    #       echo "\n\nmoduleloader.lic is required: ';repos download moduleloader.lic'\n\n."
+    #       exit
+    #   end
+    # 
+    #   ModuleLoader::load_support_script("JGTK", [required_version])
+    ## ------------------------------------------------------------------------
+    def JGTK.version
+        return "2016.12.31.01"
+    end
+
+    ## ------------------------------------------------------------------------
+    # Basic GTK window "dumbed down" for the limited cases we need to
+    # support.
+    ## ------------------------------------------------------------------------
+    class BaseWindow
+        attr_accessor :action
+        attr_reader :height, :resizable, :title, :width, :window
+        protected :window
+
+        def initialize(title, width = 400, height = 300)
+            # Windows can be resized by default with GTK
+            @resizable = true
+            @width     = width
+            @height    = height
+            @title     = title
+
+            Gtk.queue {
+                @window = Gtk::Window.new
+                @window.title = "#{self.title}"
+                @window.border_width = 3 # Arbitrarily chosen
+            }
+
+            self.resize(self.width, self.height)
+        end
+
+        def resizable=(can_resize)
+            @resizable = can_resize
+
+            Gtk.queue {
+                self.window.resizable = self.resizable
+            }
+        end
+
+        def resize(width, height)
+            @height = height
+            @width = width
+
+            Gtk.queue {
+                # http://stackoverflow.com/questions/3582558/setting-resizable-to-false-shrinks-window-to-point
+                @window.set_size_request(@width, @height)
+            }
+        end
+
+        def run
+            begin
+                Gtk.queue {
+                    # Hook up closing the window
+                    @window.signal_connect_after('delete_event') {
+                        @action = :exit
+                    }
+
+                    # Show the window
+                    @window.show_all
+                    # Keep it above the client window.
+                    @window.keep_above = true
+                }
+
+                wait_while { @action.nil? }
+
+            rescue
+                respond "That was bad.\n#{$!.backtrace.join("\n\t")}"
+
+            ensure
+                Gtk.queue {
+                    @window.destroy
+                }
+            end
+        end
+
+    end
+
+    ## ------------------------------------------------------------------------
+    # It's a button. It's clicky.
+    ## ------------------------------------------------------------------------
+    class Button < Widget
+        attr_reader :action
+
+        def initialize(text, action = nil)
+            @text = text
+            @action = action
+
+            Gtk.queue {
+                @widget = Gtk::Button.new(text)
+            }
+
+            if (!action.nil?)
+               onclick(action);
+            end
+        end
+
+        def onclick(action)
+            @action = action
+
+            Gtk.queue {
+                @widget.signal_connect('clicked') {
+                    begin
+                       Gtk.queue {
+                            @action.call(self, text);
+                        }
+                    rescue
+                        echo "error in clicked() callback for #{self.class} with text #{self.text}"
+                    end
+                }
+            }
+        end
+
+        def text=(newtext)
+            @text = newtext
+
+            Gtk.queue {
+                @widget.label = @text
+            }
+        end
+
+        def text
+            return @text
+        end
+    end
+
+    ## ------------------------------------------------------------------------
+    # True/False check box.
+    ## ------------------------------------------------------------------------
+    class CheckButton < Widget
+        attr_reader :text
+
+        def initialize(label=nil)
+            @text = label
+
+            Gtk.queue {
+                @widget = Gtk::CheckButton.new(label)
+                @widget.sensitive = false
+            }
+        end
+
+        def checked?
+            return @widget.active?
+        end
+
+        def checked=(bool)
+            Gtk.queue {
+                @widget.set_active(bool)
+                @widget.show
+            }
+        end
+
+        def enabled?
+            value = nil
+
+            Gtk.queue {
+                value = @widget.sensitive?
+            }
+
+            return value
+        end
+
+        def enabled=(bool)
+            Gtk.queue {
+                @widget.sensitive = bool
+            }
+        end
+
+    end
+
+    ## ------------------------------------------------------------------------
+    # A Drop down list.  onchange() to do stuff then it changes.
+    ## ------------------------------------------------------------------------
+    class ComboBox < Widget
+        attr_reader :options, :selected, :action
+
+        def initialize(text, options = nil)
+            @selected = 0
+            @options = options;
+
+            Gtk.queue {
+                @widget = Gtk::ComboBox.new
+
+                @options.each{|o|
+                    @widget.append_text(o)
+                }
+            }
+        end
+
+        def add_option(option, active = false)
+            @options.push(option)
+
+            Gtk.queue {
+                @widget.append_text(option)
+            }
+
+            if (active)
+                self.set_active(@options.length - 1);
+            end
+        end
+
+        def onchange(action)
+            @action = action
+
+            Gtk.queue {
+                @widget.signal_connect("changed") {|w, e|
+                    @selected = @widget.active.to_i
+
+                    begin
+                        @action.call(w.active_text)
+                    rescue
+                        echo "error in onchange() callback for #{self.class}"
+                    end
+                }
+            }
+        end
+
+        # This is only working when option==0 and is weirdness
+        # otherwise.  Need to investigate, but delete is not the
+        # top concern at the moment.
+        # def remove_option(option=-1)
+        #     begin
+        #         if ( option==-1)
+        #             option = @widget.active.to_i
+        #         end
+        # 
+        #         Gtk.queue {
+        #             @widget.remove_text(option.to_i)
+        #             @widget.show_all
+        #         }
+        # 
+        #         @options.delete_at(option)
+        # 
+        #         if (option > 0)
+        #             option = option - 1
+        #         end
+        # 
+        #         Gtk.queue {
+        #             @widget.set_active(option.to_i);
+        #         }
+        #     rescue
+        #         echo "Oh, no, Mr. Bill!"
+        #     end
+        # end
+
+        def set_active(index)
+            @selected = index
+
+            Gtk.queue {
+                @widget.set_active(index)
+            }
+        end
+    end
+
+    ## ------------------------------------------------------------------------
+    # It's a label. It has text.
+    ## ------------------------------------------------------------------------
+    class Label < Widget
+        attr_reader :text
+
+        def initialize(text)
+            @text = text
+
+            Gtk.queue {
+                @widget = Gtk::Label.new(@text)
+                @widget.set_alignment(0, 0)
+            }
+        end
+    end
+
+    ## ------------------------------------------------------------------------
+    # A notebook page is just a Table with a title that the notebook
+    # can use when it is added to that.
+    ## ------------------------------------------------------------------------
+    class NotebookPage < Table
+        attr_reader :title
+
+        # This needs done!
+        def initialize(page_title, rows=1, columns=1)
+            @title = page_title
+            super(rows, columns)
+        end
+    end
+
+    ## ------------------------------------------------------------------------
+    # Specialized main window for a notebook (property pages) use
+    # New up a NotebookWindow. Add some NotebookPages. Call run.
+    ## ------------------------------------------------------------------------
+    class NotebookWindow < BaseWindow
+        attr_reader :container, :notebook, :pages
+        protected :container, :notebook, :pages
+
+        # Instance setup
+        def initialize(title, height, width)
+            # Call super() first since it creates the base window
+            super(title, height, width)
+
+            # Track the tabs
+            @pages = Array.new
+
+            Gtk.queue {
+                @notebook = Gtk::Notebook.new
+                @notebook.set_show_border(true)
+                @notebook.set_tab_border(3)
+                @window.add(@notebook)
+            }
+
+            self.resizable = false
+        end
+
+        def run
+            super()
+        end
+
+        def add_page(page)
+            label = JGTK::Label.new(page.title)
+
+            Gtk.queue {
+                @notebook.append_page(page.widget, label.widget)
+                @notebook.show_all
+            }
+        end
+    end
+
+    ## ------------------------------------------------------------------------
+    # A table without full table support.  Used for laying out notebook pages.
+    ## ------------------------------------------------------------------------
+    class Table < Widget
+        attr_reader :rows, :columns, :rows_used, :columns_used
+
+        def initialize(rows=1, columns=1)
+            @rows = rows
+            @columns = columns
+
+            @rows_used = 0
+            @columns_used = 0
+
+            Gtk.queue {
+                @widget = Gtk::Table.new(@rows, @columns, true)
+                @widget.border_width = 10
+            }
+        end
+
+        def add_widget(widget, position)
+
+            Gtk.queue {
+                @widget.attach_defaults(widget.widget, position.left, position.right, position.top, position.bottom)
+            }
+        end
+    end
+
+    ## ------------------------------------------------------------------------
+    # Not as useful as I'd hoped.
+    ## ------------------------------------------------------------------------
+    class TablePosition
+        attr_reader :bottom, :left, :top, :right
+
+        def initialize(left, right, top, bottom)
+            @bottom = bottom
+            @left = left
+            @top = top
+            @right = right
+        end
+    end
+
+    ## ------------------------------------------------------------------------
+    # Also known as a edit box.  It has text.  It can be disabled.
+    ## ------------------------------------------------------------------------
+    class TextBox < Widget
+        def initialize(text=nil)
+            Gtk.queue {
+                @widget = Gtk::Entry.new()
+
+                if (!text.nil?)
+                    @widget.text = text
+                end
+
+                @widget.editable = false
+            }
+        end
+
+        def enabled?
+            value = nil
+
+            Gtk.queue {
+                value = @widget.editable?
+            }
+
+            return value
+        end
+
+        def enabled=(bool)
+            Gtk.queue {
+                @widget.editable = bool
+            }
+        end
+
+        def text=(newtext)
+            Gtk.queue {
+                @widget.text = newtext
+            }
+        end
+
+        def text
+            return @widget.text
+        end
+    end
+
+    ## ------------------------------------------------------------------------
+    # Common base widget corresponding to GTK::Widget so we can use
+    # the common widget property for adding one widget to another.
+    ## ------------------------------------------------------------------------
+    class Widget
+        attr_reader :widget
+    end
+end
