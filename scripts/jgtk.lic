@@ -11,49 +11,33 @@
     author: Jymamon (gs4-jymamon@hotmail.com)
        game: Gemstone
        tags: utility
-    version: 2016.12.31.01
+    version: 2017.01.13.01
        repo: https://github.com/jymamon/lichscripts
     
     history:
-        2016.12.31.01 - Created. Subject to sweeping changes still.
+        2017.01.13.01 - Split GTK wrapper into JGTK
 =end
 
-if $jgtk_development
-    # Before exiting, undef the class so we can redefine them next run.
-    before_dying {
-        JGTK.constants.each{|c|
-            JGTK.send(:remove_const, c)
-        }
-    }
-end
-
 module JGTK
-    # Curse interpetted languages for forward declarations like this being required.
-    class Widget
+    if $development
+        # Before exiting, undef the class so we can redefine them next run.
+        before_dying {
+            echo "Cleaning up JGTK"
+
+            JGTK.constants.each{|c|
+                echo "-- Removing #{c}"
+                JGTK.send(:remove_const, c)
+            }
+        }
     end
 
-    class Table < Widget
-    end
+    class Widget ; end
+    class Table < Widget ; end
 
-    ## ------------------------------------------------------------------------
-    # Used for my auto-loader snippet
-    #   if File.file?("#{$script_dir}/moduleloader.lic")
-    #       load("#{$script_dir}/moduleloader.lic")
-    #   else
-    #       echo "\n\nmoduleloader.lic is required: ';repos download moduleloader.lic'\n\n."
-    #       exit
-    #   end
-    # 
-    #   ModuleLoader::load_support_script("JGTK", [required_version])
-    ## ------------------------------------------------------------------------
     def JGTK.version
-        return "2016.12.31.01"
+        return "2017.01.13.01"
     end
 
-    ## ------------------------------------------------------------------------
-    # Basic GTK window "dumbed down" for the limited cases we need to
-    # support.
-    ## ------------------------------------------------------------------------
     class BaseWindow
         attr_accessor :action
         attr_reader :height, :resizable, :title, :width, :window
@@ -102,7 +86,7 @@ module JGTK
                     }
 
                     # Show the window
-                    @window.show_all
+                    @window.show
                     # Keep it above the client window.
                     @window.keep_above = true
                 }
@@ -121,9 +105,6 @@ module JGTK
 
     end
 
-    ## ------------------------------------------------------------------------
-    # It's a button. It's clicky.
-    ## ------------------------------------------------------------------------
     class Button < Widget
         attr_reader :action
 
@@ -169,9 +150,6 @@ module JGTK
         end
     end
 
-    ## ------------------------------------------------------------------------
-    # True/False check box.
-    ## ------------------------------------------------------------------------
     class CheckButton < Widget
         attr_reader :text
 
@@ -213,48 +191,137 @@ module JGTK
 
     end
 
-    ## ------------------------------------------------------------------------
-    # A Drop down list.  onchange() to do stuff then it changes.
-    ## ------------------------------------------------------------------------
-    class ComboBox < Widget
-        attr_reader :options, :selected, :action
+    class GridView < Widget
+        attr_reader :model, :grid
+
+        def text
+            if @grid.selection.nil?
+                return nil
+            else
+                return @grid.selection.selected[0]
+            end
+        end
+
+        def initialize()
+            @frame = Gtk::Frame.new().set_shadow_type(Gtk::SHADOW_ETCHED_IN)
+            # TODO: allow column definitions
+            #@widget = Gtk::VBox.new(homogeneous=false, spacing=nil)
+            @model = Gtk::ListStore.new(String, String)
+
+            @grid = Gtk::TreeView.new(@model)
+            @grid.selection.mode = Gtk::SELECTION_SINGLE
+            @grid.set_headers_visible(false)
+
+            # TODO: allow column naming
+            column = Gtk::TreeViewColumn.new("1", Gtk::CellRendererText.new, :text => 0)
+            @grid.append_column(column)
+            column2 = Gtk::TreeViewColumn.new("2", Gtk::CellRendererText.new, :text => 1)
+            @grid.append_column(column2)
+
+            # Use ScrolledWindow to make the TreeView scrollable
+            # Otherwise the TreeView would expand to show all items
+            # Only allow vertical scrollbar
+            @widget = Gtk::ScrolledWindow.new(nil, nil)
+            @widget.set_policy( Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC )
+            @widget.add(@grid)
+            @widget.set_shadow_type(Gtk::SHADOW_IN)
+        end
+
+        # TODO: record is assumed to just be a string at the moment
+        def add_option(creature, level)
+            begin
+                Gtk.queue {
+                    iter = @model.append
+                    iter[0] = creature
+                    iter[1] = "Level: #{level==999 ? 'scaling' : level}"
+                }
+            rescue
+                echo "error in add_option() callback for #{self.class}"
+                echo "#{$!.backtrace.join("\n\t----- ")}"
+            end
+        end
+
+        def clear()
+            Gtk.queue {
+                @model.clear
+            }
+        end
+
+        def remove_option()
+            begin
+                Gtk.queue {
+                    remove = nil
+
+                    @model.each{|model,path,iter|
+                        remove = iter if (iter[0]==self.text)
+                    }
+
+                    @model.remove(remove)
+                }
+            rescue
+                echo "error in remove_option() for #{self.class}"
+                echo "#{$!.backtrace.join("\n-- ")}"
+            end
+        end
+    end
+
+    class ListStore < Widget
+        attr_reader :selected, :action
+
+        def text
+            return @widget.active_text
+        end
 
         def initialize(text, options = nil)
             @selected = 0
-            @options = options;
 
             Gtk.queue {
-                @widget = Gtk::ComboBox.new
+                @widget = Gtk::ListStore.new(String)
 
-                @options.each{|o|
-                    @widget.append_text(o)
+                options.each{|o|
+                    iter = @widget.append
+                    iter[0] = o
                 }
             }
         end
 
-        def add_option(option, active = false)
-            @options.push(option)
-
+        def active=(value)
             Gtk.queue {
-                @widget.append_text(option)
+                self.set_active(value)
             }
+        end
 
-            if (active)
-                self.set_active(@options.length - 1);
-            end
+        def add_option(option, active = false)
+            Gtk.queue {
+                iter = @widget.append
+                iter[0] = option
+
+                if (active)
+                    @widget.active_iter = iter;
+                end
+            }
+        end
+
+        def clear()
+            Gtk.queue {
+                @widget.clear
+            }
         end
 
         def onchange(action)
             @action = action
 
             Gtk.queue {
-                @widget.signal_connect("changed") {|w, e|
-                    @selected = @widget.active.to_i
+                @widget.signal_connect("changed") {|c|
+                    if c.active > -1
+                        @selected = @widget.active.to_i
 
-                    begin
-                        @action.call(w.active_text)
-                    rescue
-                        echo "error in onchange() callback for #{self.class}"
+                        begin
+                            @action.call(c.active_iter[0])
+                        rescue
+                            echo "error in onchange() callback for #{self.class}"
+                            echo "#{$!.backtrace.join("\n\t")}"
+                        end
                     end
                 }
             }
@@ -263,30 +330,28 @@ module JGTK
         # This is only working when option==0 and is weirdness
         # otherwise.  Need to investigate, but delete is not the
         # top concern at the moment.
-        # def remove_option(option=-1)
-        #     begin
-        #         if ( option==-1)
-        #             option = @widget.active.to_i
-        #         end
-        # 
-        #         Gtk.queue {
-        #             @widget.remove_text(option.to_i)
-        #             @widget.show_all
-        #         }
-        # 
-        #         @options.delete_at(option)
-        # 
-        #         if (option > 0)
-        #             option = option - 1
-        #         end
-        # 
-        #         Gtk.queue {
-        #             @widget.set_active(option.to_i);
-        #         }
-        #     rescue
-        #         echo "Oh, no, Mr. Bill!"
-        #     end
-        # end
+        def remove_option(option=-1)
+            begin
+                if ( option==-1)
+                    option = @widget.active
+                end
+
+                Gtk.queue {
+                    @widget.remove_text(@widget.active)
+                }
+
+                if (option > 0)
+                    option = option - 1
+                end
+
+                Gtk.queue {
+                    self.set_active(option.to_i);
+                }
+            rescue
+                echo "error in remove_option() for #{self.class}"
+                echo "#{$!.backtrace.join("\n\t")}"
+            end
+        end
 
         def set_active(index)
             @selected = index
@@ -297,9 +362,108 @@ module JGTK
         end
     end
 
-    ## ------------------------------------------------------------------------
-    # It's a label. It has text.
-    ## ------------------------------------------------------------------------
+    class ComboBox < Widget
+        attr_reader :selected, :action
+
+        def text
+            return @widget.active_text
+        end
+
+        def initialize(text, options = nil)
+            @selected = 0
+
+            Gtk.queue {
+                @model = Gtk::ListStore.new(String)
+                @widget = Gtk::ComboBox.new(@model)
+
+                renderer = Gtk::CellRendererText.new
+                @widget.pack_start(renderer, true)
+                @widget.set_attributes(renderer, :text => 0)
+
+                options.each{|o|
+                    iter = @model.append
+                    iter[0] = o
+                }
+            }
+        end
+
+        def active=(value)
+            Gtk.queue {
+                self.set_active(value)
+            }
+        end
+
+        def add_option(option, active = false)
+            Gtk.queue {
+                iter = @model.append
+                iter[0] = option
+
+                if (active)
+                    @widget.active_iter = iter;
+                end
+            }
+        end
+
+        def clear()
+            Gtk.queue {
+                @model.clear
+            }
+        end
+
+        def onchange(action)
+            @action = action
+
+            Gtk.queue {
+                @widget.signal_connect("changed") {|c|
+                    if c.active > -1
+                        @selected = @widget.active.to_i
+
+                        begin
+                            @action.call(c.active_iter[0])
+                        rescue
+                            echo "error in onchange() callback for #{self.class}"
+                            echo "#{$!.backtrace.join("\n\t")}"
+                        end
+                    end
+                }
+            }
+        end
+
+        # This is only working when option==0 and is weirdness
+        # otherwise.  Need to investigate, but delete is not the
+        # top concern at the moment.
+        def remove_option(option=-1)
+            begin
+                if ( option==-1)
+                    option = @widget.active
+                end
+
+                Gtk.queue {
+                    @widget.remove_text(@widget.active)
+                }
+
+                if (option > 0)
+                    option = option - 1
+                end
+
+                Gtk.queue {
+                    self.set_active(option.to_i);
+                }
+            rescue
+                echo "error in remove_option() for #{self.class}"
+                echo "#{$!.backtrace.join("\n\t")}"
+            end
+        end
+
+        def set_active(index)
+            @selected = index
+
+            Gtk.queue {
+                @widget.set_active(index)
+            }
+        end
+    end
+
     class Label < Widget
         attr_reader :text
 
@@ -313,34 +477,24 @@ module JGTK
         end
     end
 
-    ## ------------------------------------------------------------------------
-    # A notebook page is just a Table with a title that the notebook
-    # can use when it is added to that.
-    ## ------------------------------------------------------------------------
     class NotebookPage < Table
-        attr_reader :title
+        attr_reader :title, :container
 
-        # This needs done!
-        def initialize(page_title, rows=1, columns=1)
+        def initialize(page_title, container, rows=1, columns=1)
             @title = page_title
+            @container = container
             super(rows, columns)
         end
     end
 
-    ## ------------------------------------------------------------------------
-    # Specialized main window for a notebook (property pages) use
-    # New up a NotebookWindow. Add some NotebookPages. Call run.
-    ## ------------------------------------------------------------------------
     class NotebookWindow < BaseWindow
         attr_reader :container, :notebook, :pages
         protected :container, :notebook, :pages
 
-        # Instance setup
         def initialize(title, height, width)
             # Call super() first since it creates the base window
             super(title, height, width)
 
-            # Track the tabs
             @pages = Array.new
 
             Gtk.queue {
@@ -348,6 +502,17 @@ module JGTK
                 @notebook.set_show_border(true)
                 @notebook.set_tab_border(3)
                 @window.add(@notebook)
+
+                @notebook.signal_connect_after('switch-page') {|me, page, number|
+                    Gtk.queue {
+                        begin
+                            @pages[number].container.activate
+                        rescue
+                            echo "switch-page error"
+                            echo "#{$!.backtrace.join("\n\t")}"
+                        end
+                    }
+                }
             }
 
             self.resizable = false
@@ -359,6 +524,7 @@ module JGTK
 
         def add_page(page)
             label = JGTK::Label.new(page.title)
+            @pages.push(page)
 
             Gtk.queue {
                 @notebook.append_page(page.widget, label.widget)
@@ -367,9 +533,6 @@ module JGTK
         end
     end
 
-    ## ------------------------------------------------------------------------
-    # A table without full table support.  Used for laying out notebook pages.
-    ## ------------------------------------------------------------------------
     class Table < Widget
         attr_reader :rows, :columns, :rows_used, :columns_used
 
@@ -387,16 +550,18 @@ module JGTK
         end
 
         def add_widget(widget, position)
-
             Gtk.queue {
                 @widget.attach_defaults(widget.widget, position.left, position.right, position.top, position.bottom)
             }
         end
+
+        def remove_widget(widget)
+            Gtk.queue {
+                @widget.remove(widget.widget)
+            }
+        end
     end
 
-    ## ------------------------------------------------------------------------
-    # Not as useful as I'd hoped.
-    ## ------------------------------------------------------------------------
     class TablePosition
         attr_reader :bottom, :left, :top, :right
 
@@ -408,9 +573,6 @@ module JGTK
         end
     end
 
-    ## ------------------------------------------------------------------------
-    # Also known as a edit box.  It has text.  It can be disabled.
-    ## ------------------------------------------------------------------------
     class TextBox < Widget
         def initialize(text=nil)
             Gtk.queue {
@@ -451,11 +613,15 @@ module JGTK
         end
     end
 
-    ## ------------------------------------------------------------------------
-    # Common base widget corresponding to GTK::Widget so we can use
-    # the common widget property for adding one widget to another.
-    ## ------------------------------------------------------------------------
     class Widget
         attr_reader :widget
+
+        def hide
+            @widget.hide
+        end
+
+        def show
+            @widget.show
+        end
     end
 end

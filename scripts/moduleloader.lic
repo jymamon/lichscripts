@@ -4,11 +4,11 @@
     author: Jymamon (gs4-jymamon@hotmail.com)
        game: Gemstone
        tags: utility
-    version: 2016.12.31.01
+    version: 2017.01.13.01
        repo: https://github.com/jymamon/lichscripts
     
     history:
-        2016.12.31.01 - Created to remove duplication from other scripts
+        2017.01.13.01 - Split module loading into moduleloader
 =end
 
 module ModuleLoader
@@ -21,7 +21,6 @@ module ModuleLoader
     end
 
     def ModuleLoader.load_support_script(modulename, version_required=nil)
-        # TODO: Auto-update modules.
         if File.file?("#{$script_dir}/#{modulename}.lic")
             load("#{$script_dir}/#{modulename}.lic")
         else

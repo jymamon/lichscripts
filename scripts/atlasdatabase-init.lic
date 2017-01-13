@@ -1942,4 +1942,4 @@ areas_to_add_or_update.each{|area|
 
 echo "Added #{i} areas"
 
-BountyDatabase.close_db()
+AtlasDatabase.close_db()
