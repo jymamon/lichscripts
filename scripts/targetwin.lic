@@ -1,0 +1,29 @@
+=begin
+	Creates a simple StormFront window displaying the status of all NPCs in the room and creating a button target it with the click of a mouse.
+	Usefull in swarms, or just if you are wondering if that stun has worn off yet.
+	
+	*Version: 0.1 - First upload, very basic and rough concept. Not tested much at all.
+	
+	Author: Rockmontan
+
+=end
+
+before_dying { puts("<closeDialog id='TargetWindow'/>") }
+
+puts("<closeDialog id='TargetWindow'/><openDialog type='dynamic' id='TargetWindow' title='Targets' target='TargetWindow' location='main' height='150' resident='true'><dialogData id='TargetWindow'></dialogData></openDialog>")
+
+loop {
+	windowdata = "<dialogData id='TargetWindow' clear='t'>"
+	startloc = 0;
+	GameObj.npcs.each { |npc|
+		if npc.status =~ /dead/
+		else
+			windowdata += "<cmdButton id='NPC_#{npc.id}' value='#{npc.name} (#{npc.status})' justify='1' anchor_top='top' cmd='target ##{npc.id}' top='#{startloc}' left='1' echo='Now targeting ##{npc.id}' width='180'/>"
+			startloc += 20
+		end
+	}
+	windowdata += "</dialogData>"
+	puts(windowdata)
+		
+	sleep 0.2
+}

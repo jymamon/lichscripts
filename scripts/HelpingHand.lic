@@ -1,0 +1,168 @@
+require 'drb'
+
+# This should not be hardcoded. Need to investigate using a local Rhinda (or Rhinda-like) service
+# to make it discoverable. The goal is no IG character communication should be necessary to get
+# the client and server talking.
+#SERVER_URI="druby://#{ENV["COMPUTERNAME"]}:20002"
+SERVER_URI="druby://localhost:20002"
+
+# Start up the DRb client since that's what we'll use to get a pointer to the objects
+# registered with it.
+DRb.start_service
+
+# Attach the client to the DRb server above
+$service = DRbObject.new(nil, SERVER_URI)
+
+# Again, an infinite loop in our first rev. Here, we just keep the window above up to date with the
+# current status affects of our followers.
+while ( true )
+    paused = ""
+
+    $service.members.sort.each { |name, char|
+        begin
+            next if ( char.dead? )
+
+            if char.stunned?
+                if name.downcase == Char.name.downcase
+                    pause 0.1 while ( char.stunned? );
+                elsif ( Spell[108].known? )
+                    GameObj.pcs.each{|p|
+                        if ( p.name.capitalize==name.capitalize )
+
+                            if running? "legion" 
+                                pause_script "legion"
+                                paused = "legion"
+                            end
+
+                            Spell[108].cast("#{name.capitalize}")
+                        end
+                    }
+                end
+            end                                                                   
+
+            if char.webbed?
+
+                if name.downcase == Char.name.downcase
+                    pause 0.1 while ( char.webbed? );
+                elsif ( Spell[209].known? )
+                    GameObj.pcs.each{|p|
+
+                            if running? "legion" 
+                                pause_script "legion"
+                                paused = "legion"
+                            end
+
+                        if ( p.name.capitalize==name.capitalize )
+                            Spell[209].cast("#{name.capitalize}")
+                        end
+                    }
+                end
+            end
+
+            if !char.standing? && !char.stunned?
+                if name.downcase == Char.name.downcase
+
+                    if running? "legion" 
+                        pause_script "legion"
+                        paused = "legion"
+                    end
+
+                    fput "stand" unless running? "sloot"
+                else
+                    GameObj.pcs.each{|p|
+                        if ( p.name.capitalize==name.capitalize )
+                            if running? "legion" 
+                                pause_script "legion"
+                                paused = "legion"
+                            end
+
+                            pause 2
+                            if !char.standing?
+                                echo 
+                                fput "pull #{name.capitalize}"
+                            end
+                        end
+                    }
+                end
+            end
+
+            if char.poisoned?
+                if name.downcase == Char.name.downcase
+
+                    if running? "legion" 
+                        pause_script "legion"
+                        paused = "legion"
+                    end
+
+                    Spell[114].cast("#{name}") if ( Spell[114].known? )
+                elsif ( Spell[114].known? )
+                    GameObj.pcs.each{|p|
+                        if ( p.name.capitalize==name.capitalize )
+
+                            if running? "legion" 
+                                pause_script "legion"
+                                paused = "legion"
+                            end
+
+                            Spell[114].cast("#{name.capitalize}")
+                        end
+                    }
+                end
+            end                                                                   
+
+            if char.diseased?
+                if name.downcase == Char.name.downcase
+                    if running? "legion" 
+                        pause_script "legion"
+                        paused = "legion"
+                    end
+
+                    Spell[113].cast("#{name}") if ( Spell[113].known? )
+                elsif ( Spell[113].known? )
+                    GameObj.pcs.each{|p|
+                        if ( p.name.capitalize==name.capitalize )
+                            if running? "legion" 
+                                pause_script "legion"
+                                paused = "legion"
+                            end
+
+                            Spell[113].cast("#{name.capitalize}")
+                        end
+                    }
+                end
+            end
+
+            if char.Health['current'] < (char.Health['max'] * 0.5)
+                if name.downcase == Char.name.downcase
+                    if running? "legion" 
+                        pause_script "legion"
+                        paused = "legion"
+                    end
+
+                elsif ( Spell[1101].known? && health > (maxhealth * 0.5))
+                    GameObj.pcs.each{|p|
+                        if ( p.name.capitalize==name.capitalize )
+                            if running? "legion" 
+                                pause_script "legion"
+                                paused = "legion"
+                            end
+
+                            fput "transfer #{name.capitalize}"
+                            fput "cure blood"
+
+                        end
+                    }
+                end
+            end
+
+        rescue
+            $service.del_character(name)
+        end
+    }
+
+    if paused!=""
+        unpause_script "#{paused}"
+    end
+
+    pause 1
+end

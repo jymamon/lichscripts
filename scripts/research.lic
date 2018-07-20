@@ -1,0 +1,474 @@
+=begin
+
+    Research alchemy
+
+    ;research --help
+
+     author: Jymamon (gs4-jymamon@hotmail.com)
+       game: Gemstone
+       tags: alchemy
+    version: 2017.02.28.01
+
+=end
+
+# -----------------------------------------------------------------------------
+# Require the helper library as I'm tired of C+P many of the same code blocks.
+# -----------------------------------------------------------------------------
+if File.file?("#{$script_dir}/cantrips.lic")
+    load("#{$script_dir}/cantrips.lic")
+else
+    echo "\n\ncantrips.lic is required: ';repos download cantrips.lic'\n\n"
+    exit
+end
+
+if ( $CantripsVer < "2015.04.02.01" )
+    Cantrips::Message.bold "-- Running with an untested version of cantrips.  This may not work."
+end
+
+class Research
+    @recipe = nil
+    @understanding = ""
+
+    @topics =
+    {
+        "the study of light, vaporous, penetrating essences"                             => "aeromancy",
+        "the magical evocation of air"                                                   => "aeromancy",
+        "the conjuration of winds and vapors"                                            => "aeromancy",
+
+        "the dissection of bodies"                                                       => "anatomy",
+        "descriptions of the blood of assorted creatures"                                => "anatomy",
+        "he study of bones and organs"                                                   => "anatomy",
+
+        "interpretations of omens in the sky"                                            => "astrology",
+        "the influence of celestial bodies on common substances"                         => "astrology",
+        "the significance and effects of various constellations"                         => "astrology",
+
+        "using celestial objects for navigation and calendar-making"                     => "astronomy",
+        "the movement of stars during seasons of the year"                               => "astronomy",
+
+        "the invocation of spirits"                                                      => "blessings",
+        "the bestowing of spiritual favor"                                               => "blessings",
+        "supplication to higher powers"                                                  => "blessings",
+
+        "the formation of crystals and salts"                                            => "crystallography",
+        "the effect of crystals on other objects"                                        => "crystallography",
+        "the properties of certain minerals"                                             => "crystallography",
+
+        "the magical reception of knowledge of distant places and events"                => "divination",
+        "clairvoyance and precognition"                                                  => "divination",
+
+        "the analysis of physical power when applied to matter"                          => "energy",
+        "heat, light, electricity, plasma and mana"                                      => "energy",
+        "the effects of different forces on physical objects"                            => "energy",
+        
+        "the magical evocation of earth"                                                 => "geomancy",
+
+        "the alchemical use of gemstones"                                                => "gemology",
+        "the various treatment of gems with water, oil, and heat"                        => "gemology",
+
+        "folk cures made from leaves and roots"                                          => "herbology",
+        "the study of unusual plants"                                                    => "herbology",
+        "the extraction of essential spice oils"                                         => "herbology",
+
+        "the study of liquid, flowing, creative essences"                                => "hydromancy",
+        "the magical evocation of water"                                                 => "hydromancy",
+        "the conjuration of liquids and fluids"                                          => "hydromancy",
+
+        "structured deduction and inference"                                             => "logic",
+        "formal reasoning"                                                               => "logic",
+        "famous dialectic debates"                                                       => "logic",
+
+        "the art of numerology"                                                          => "mathematics",
+        "identifying abstract equations with real phenomena"                             => "mathematics",
+        "natural patterns of numbers and other symbols"                                  => "mathematics",
+
+        "healing substances"                                                             => "medicine",
+        "remedies for disease"                                                           => "medicine",
+        "treatments for bodily injury"                                                   => "medicine",
+
+        "achieving clarity of mental and physical focus"                                 => "meditation",
+        "higher awareness through self-purification"                                     => "meditation",
+
+        "methods for improving psychic power"                                            => "mentalism",
+        "the analysis of dreams"                                                         => "mentalism",
+        "creating illusions in the minds of others"                                      => "mentalism",
+
+        "alchemical enhancements of the forging process"                                 => "metallurgy",
+        "speculation into the transmutation of metals"                                   => "metallurgy",
+        "the crafting of experimental alloys"                                            => "metallurgy",
+
+        "cosmological explanations of the origin of the world"                           => "metaphysics",
+        "first principles and the nature of reality"                                     => "metaphysics",
+        "questions concerning existence, change, and non-existence"                      => "metaphysics",
+
+        "theories of weather forecasting and control"                                    => "meteorology",
+        "the study of rain, hail and snow"                                               => "meteorology",
+
+        "techniques of entering trances"                                                 => "mysticism",
+        "the experience of different realities"                                          => "mysticism",
+        "enlightenment through transcendent knowledge"                                   => "mysticism",
+
+        "the concepts of knowledge and existence"                                        => "philosophy",
+        "scientific examinations of truth and beauty"                                    => "philosophy",
+        "how the mind and the body exchange information"                                 => "philosophy",
+
+        "the laws of nature and movement of material objects"                            => "physics",
+        "what happens when basic objects collide with each other"                        => "physics",
+        "the simple mechanical motion of physical objects"                               => "physics",
+
+        "the study of flaring, volatile, disruptive essences"                            => "pyromancy",
+        "the conjuration of flames and fires"                                            => "pyromancy",
+
+        "natural forms and harmonic angles"                                              => "sacred geometry",
+        "perfect shapes and ratios"                                                      => "sacred geometry",
+
+        "discussions of animus and soul"                                                 => "spiritualism",
+        "magic that taps spiritual power"                                                => "spiritualism",
+
+        "the binding of supernatural powers"                                             => "summoning",
+        "rituals that influence and dominate spiritual beings"                           => "summoning",
+        "the command of spirits"                                                         => "summoning",
+
+        "the mental manipulation of matter"                                              => "telekinetics",
+        "the transformation of one's body through mental powers"                         => "telekinetics",
+        "astral teleportation"                                                           => "telekinetics",
+
+        "non-physical transmission of thoughts"                                          => "telepathy",
+        "the manipulation of emotional energy"                                           => "telepathy",
+        "the role of symbols in the conscious mind"                                      => "telepathy",
+
+        "local legends of various deities"                                               => "theology",
+        "religious doctrine"                                                             => "theology",
+
+        "the manipulation of temporal forces"                                            => "time",
+        "the concepts of past, present, and future"                                      => "time",
+        "the eternally cyclical nature of the ages"                                      => "time",
+    }
+
+    # -----------------------------------------------------------------------------
+    # Option parsing/setup
+    # -----------------------------------------------------------------------------
+    require 'optparse'
+
+    Options = Struct.new(:skill)
+
+    class Parser
+        def self.parse(options)
+            args = Options.new()
+            
+            opt_parser = OptionParser.new { |opts|
+                opts.banner = "Usage: research.lic [options]"
+
+                opts.on("-n", "--new", "Force a new search. Don't resume anything in progress.") { |parameter|
+                    if ( !CharSettings['inprogress'].nil? )
+                        Research.search("new")
+                        pause 0.25
+                        Research.search("new confirm")
+                        pause 0.25
+                    end
+                    
+                    CharSettings['inprogress'] = nil
+                    CharSettings.save
+                }
+
+                opts.on("-sSKILL", "--skill=SKILL", "The alchemy skill to research: alchemy, potions, or trinkets. Required.") { |parameter|
+                    args.skill = parameter
+                }
+
+                opts.on("-h", "--help", "Prints this help") {
+                    echo opts.to_s
+                    exit
+                }
+            }
+
+            opt_parser.parse!(options)
+
+            # Hack-ish but sufficient for catching unused parameters
+            if ( options.any? )
+                opt_parser.parse("--help")
+            end
+
+            error = false
+
+            if ( args.skill.nil? )
+                echo "skill must be specified"
+                error = true
+            end
+
+            if error then exit end
+
+            return args
+        end
+    end
+
+    def self.pay
+        Cantrips::Locations.getsilvers(2000);
+        fput "pay 2000";
+    end
+
+    def self.ponder
+        done_pondering = false
+
+        begin
+            line = dothistimeout(
+                "ponder",
+                30,
+                /You've\sread\s(.*)\sof\sthis\sselection\sand\syou\shave\sa\s(.*)\sunderstanding\sof\sit.|
+                Haven't\syou\salready\sthought\sthis\sthrough\?\s\sPerhaps\syou\sshould\sgo\sback\sto\sreading\.|
+                "Ahem\."\s\sBefore\syou\scan\slay\syour\shands\son\sanything\suseful,\san\sassistant\slibrarian\sarrives\sto\sinform\syou\sthat\sguild\sfees\sdo\snot\scover\saccess\sto\sthese\sprecious\svolumes\.\s\s(?:He|She)\sthen\sinquires\sif\syou\swould\slike\sto\sPAY\sfor\susage\srights\.|
+                There\sis\sa\slot\sof\smention\sin\sthis\sreading\sabout\s(.*)\.\s\sWould\syou\srather\sSEARCH\sfor\sbooks\son\s(.*),\s(.*),\sor\s(.*)\?|
+                Ponder\swhat\?\s\sYou\shaven't\sread\sanything\syet\.|
+                You\sinquire\sabout\sa\sparticular\s.*?,\sbased\son\sthe\sclues\syou\shave\sdrawn\sfrom\sthis\stext\.\s\sWithout\seven\sconsulting\s(?:his|her)\scatalog,\sthe\sassistant\slibrarian\ssays,\s"Ah,\syes.\s\sThat\swould\sbe\sin\s(?:[a-z]+?)\b\s'(.*)',\s(?:[a-z]+?)\b\s'(.*)',\s(?:[a-z]+?)\b\s'(.*)'\.\"/x);
+
+            case line
+                when /You\sinquire\sabout\sa\sparticular\s.*?,\sbased\son\sthe\sclues\syou\shave\sdrawn\sfrom\sthis\stext\.\s\sWithout\seven\sconsulting\s(?:his|her)\scatalog,\sthe\sassistant\slibrarian\ssays,\s"Ah,\syes.\s\sThat\swould\sbe\sin\s(?:[a-z]+?)\b\s'(.*)',\s(?:[a-z]+?)\b\s'(.*)',\s(?:[a-z]+?)\b\s'(.*)'\.\"/
+                    pause (rand(4) + rand(4))
+                    self.search("#{$1.upcase} #{$2.upcase} #{$3.upcase}")
+                    @understanding = ""
+                    done_pondering = true
+
+                when /You\shaven't\sread\sanything\syet\./
+                    done_pondering = true
+
+                when /You've read (?:.*) of this selection and you have a (.*) understanding of it\./
+                    @understanding = $1
+                    done_pondering = true
+
+                when /Haven't you already thought this through?  Perhaps you should go back to reading\./
+                    done_pondering = true
+
+                when /There\sis\sa\slot\sof\smention\sin\sthis\sreading\sabout\s(.*)\.\s\sWould\syou\srather\sSEARCH\sfor\sbooks\son\s(.*),\s(.*),\sor\s(.*)\?/
+                    topic = $1
+                    options = [$2, $3, $4]
+
+                    if @topics.key?(topic)
+                        pause (rand(4) + rand(4))
+                        self.search(@topics[topic])
+                    else
+                        Cantrips::Message.bold("Topic: #{topic}. SEARCH #{options}")
+                        waitrt;
+                    end
+
+                when /Before you can lay your hands on anything useful,/
+                    self.pay()
+
+            else
+                # ACK!
+                Cantrips::Message.bold("Gotta ponder by hand, buddy!")
+                exit
+            end
+
+            pause 0.25
+            waitrt?;
+        end while (!done_pondering)
+    end
+
+    def self.read
+        done_reading = false
+
+        begin
+            line = dothistimeout(
+                "read",
+                40,
+                /You've\sread\s(?:.*?)\sof\sthis\sselection\sand\syou\shave\sa\s(.*)\sunderstanding\sof\sit\.|
+                You\sinquire\sabout\sa\sparticular\s.*?,\sbased\son\sthe\sclues\syou\shave\sdrawn\sfrom\sthis\stext\.\s\sWithout\seven\sconsulting\s(?:his|her)\scatalog,\sthe\sassistant\slibrarian\ssays,\s"Ah,\syes.\s\sThat\swould\sbe\sin\s(?:[a-z]+?)\b\s'(.*)',\s(?:[a-z]+?)\b\s'(.*)',\s(?:[a-z]+?)\b\s'(.*)'\.\"|
+                There\sis\sa\slot\sof\smention\sin\sthis\sreading\sabout\s(.*)\.\s\sWould\syou\srather\sSEARCH\sfor\sbooks\son\s(.*),\s(.*),\sor\s(.*)\?|
+                "Ahem\."\s\sBefore\syou\scan\slay\syour\shands\son\sanything\suseful,\san\sassistant\slibrarian\sarrives\sto\sinform\syou\sthat\sguild\sfees\sdo\snot\scover\saccess\sto\sthese\sprecious\svolumes\.\s\s(?:He|She)\sthen\sinquires\sif\syou\swould\slike\sto\sPAY\sfor\susage\srights\.|
+                You\ssearch\sand\ssearch,\sbut\sdon't\shave\sa\sclue\swhat\syou\sshould\sbe\slooking\sfor\.|
+                You\sfind\sa\sfew\stexts,\sbut\sthey\sdon't\sseem\sstrongly\senough\stied\sto\syour\sresearch\sfocus\.\s\sPerhaps\syou\sshould\sdo\ssome\smore\sreading\.|
+                You\sspeculate\sthat\sthe\srecipe\syou\sare\sresearching\sis\sprobably\sfor\s(?:(?:a|an|some)\s)?(.*)\.|
+                Discovery!\s\sThis\sis\sit,\sthe\svery\sinformation\syou've\sbeen\slooking\sfor\.\s\sHidden\swithin\sthis\sobscure\stext\sis\sa\sprecise\sdescription\sof\s(.*)\sand\sthe\smeans\sto\screate\sit\.\s\sAt\slast,\syour\ssearch\sis\sover\.
+                Your\swandering\shas\sdistracted\syou\.\s\sYou'll\shave\sto\sstart\sreading\sfrom\sthe\stop\sof\sthe\spage\.|
+                Your\spath\sof\sstudy\sseems\sto\sbe\staking\sa\sturn\sfor\sthe\sworse\.|
+                There\sis\snot\smuch\syou\scan\sdo\sbut\snote\sthe\sincomplete\srecipe\sand\shope\sfor\sfurther\sclues\.|
+                You'll\shave\sto\sstart\sreading\sfrom\sthe\sbeginning,\sthough\.|
+                The\scognitive\sdissonance\sis\senough\sto\sforce\syou\sto\sstart\sreading\sfrom\sthe\sbeginning\.|
+                Fortunately,\syou\shave\sthe\sdiscernment\sto\srecognize\sthis\sbefore\syou\sbecome\sstuck\sat\sa\sresearch\sroadblock\.|
+                You'll\shave\sto\sstart\sreading\sfrom\sthe\stop\sof\sthe\spage\.|
+                You\strust\syour\sintuitive\ssense\sto\slead\syou\sin\sthe\sright\sdirection\sas\syou\scontinue\.|
+                But\syou've\salready\sdiscovered\sthe\sclues\sthat\swill\slead\syou\sonward!|
+                You\scan't\sdo\sthat\./x);
+
+            case line
+                when /You\scan't\sdo\sthat\./
+                    done_reading = false
+                    self.search(@options.skill)
+
+                when /You'll\shave\sto\sstart\sreading\sfrom\sthe\stop\sof\sthe\spage\./
+                    done_reading = false
+
+                when /You'll\shave\sto\sstart\sreading\sfrom\sthe\sbeginning,\sthough.|The\scognitive\sdissonance\sis\senough\sto\sforce\syou\sto\sstart\sreading\sfrom\sthe\sbeginning\./
+                    done_reading = false
+
+                when /Fortunately,\syou\shave\sthe\sdiscernment\sto\srecognize\sthis\sbefore\syou\sbecome\sstuck\sat\sa\sresearch\sroadblock\./
+                    done_reading = false
+
+                when /You\strust\syour\sintuitive\ssense\sto\slead\syou\sin\sthe\sright\sdirection\sas\syou\scontinue\./
+                    done_reading = true
+
+                when /You've read (?:.*?) of this selection and you have a (.*) understanding of it\./
+                    @understanding = $1
+                    done_reading = true
+
+                when /You\sinquire\sabout\sa\sparticular\s.*?,\sbased\son\sthe\sclues\syou\shave\sdrawn\sfrom\sthis\stext\.\s\sWithout\seven\sconsulting\s(?:his|her)\scatalog,\sthe\sassistant\slibrarian\ssays,\s"Ah,\syes.\s\sThat\swould\sbe\sin\s(?:[a-z]+?)\b\s'(.*)',\s(?:[a-z]+?)\b\s'(.*)',\s(?:[a-z]+?)\b\s'(.*)'\.\"/
+                    pause (rand(4) + rand(4))
+                    self.search("#{$1.upcase} #{$2.upcase} #{$3.upcase}")
+                    @understanding = ""
+                    self.read() if ( @recipe.nil? )
+                    done_reading = true
+
+                when /"Ahem\."  Before you can lay your hands on anything useful, an assistant librarian arrives to inform you that guild fees do not cover access to these precious volumes\.  (?:He|She) then inquires if you would like to PAY for usage rights\./
+                    self.pay
+
+                when /There is a lot of mention in this reading about (.*)\.  Would you rather SEARCH for books on (.*), (.*), or (.*)\?/
+                    topic = $1
+                    options = [$2, $3, $4]
+
+                    if @topics.key?(topic)
+                        pause (rand(2) + rand(3))
+                        self.search(@topics[topic])
+                    else
+                        Cantrips::Message.bold("Topic: #{topic}. SEARCH #{options}")
+                        waitrt;
+                    end
+
+                when /You find a few texts, but they don't seem strongly enough tied to your research focus\.  Perhaps you should do some more reading\./
+                    done_reading = false
+
+                when /Your\spath\sof\sstudy\sseems\sto\sbe\staking\sa\sturn\sfor\sthe\sworse\./
+                    done_reading = false
+
+                when /Discovery!\s\sThis\sis\sit,\sthe\svery\sinformation\syou've\sbeen\slooking\sfor\.\s\sHidden\swithin\sthis\sobscure\stext\sis\sa\sprecise\sdescription\sof\s(.*)\sand\sthe\smeans\sto\screate\sit\.\s\sAt\slast,\syour\ssearch\sis\sover\./
+                    @recipe = $1
+                    @understanding = ""
+                    done_reading = true
+                    fput "cheer"
+
+                when /hope\sfor\sfurther\sclues\./
+                    done_reading = false
+
+                when /Your wandering has distracted you.  You'll have to start reading from the top of the page\./
+                    done_reading = false
+
+                when /You\sspeculate\sthat\sthe\srecipe\syou\sare\sresearching\sis\sprobably\sfor\s(?:(?:a|an|some)\s)?(.*)\./
+                    recipe = $alchemy_recipes.find{|r| r[:nick]==$1 or r[:product]==$1; };
+
+                    if !recipe.nil?
+                        self.search("new")
+                        self.search("new confirm")
+                        self.search(@options.skill)
+                    else
+                        done_reading = true
+                    end
+
+                when /But\syou've\salready\sdiscovered\sthe\sclues\sthat\swill\slead\syou\sonward!/
+                    Cantrips::Message.bold("You did a bad search. Try again and start the script over.")
+                    exit
+            else
+                # ACK!
+                Cantrips::Message.bold(line)
+                Cantrips::Message.bold("Gotta read by hand, buddy!")
+                exit
+            end
+
+            pause 0.25
+            waitrt?;
+        end while (!done_reading)
+    end
+
+    def self.search(topic)
+
+        line = dothistimeout(
+            "search #{topic}",
+            20,
+            /You\sspeculate\sthat\sthe\srecipe\syou\sare\sresearching\sis\sprobably\sfor\s(?:(?:a|an|some)\s)?(.*)\.|
+            Roundtime|
+            "Ahem\."\s\sBefore\syou\scan\slay\syour\shands\son\sanything\suseful|
+            Discovery!\s\sThis\sis\sit,\sthe\svery\sinformation\syou've\sbeen\slooking\sfor\.\s\sHidden\swithin\sthis\sobscure\stext\sis\sa\sprecise\sdescription\sof\s(.*)\sand\sthe\smeans\sto\screate\sit\.\s\sAt\slast,\syour\ssearch\sis\sover\.|
+            Are\syou\ssure\?|
+            Rather\sthan\sbe\sfrustrated\sby\sany\smore\sdead\sends/x
+        )
+
+        if line =~ /You\sspeculate\sthat\sthe\srecipe\syou\sare\sresearching\sis\sprobably\sfor\s(?:(?:a|an|some)\s)?(.*)\./
+            researching = $1
+            recipe = $alchemy_recipes.find{|r| r[:nick]==researching or r[:product]==researching; };
+
+            if !recipe.nil?
+                self.search("new")
+                self.search("new confirm")
+                self.search(@options.skill)
+            end
+
+        elsif line =~ /Discovery!\s\sThis\sis\sit,\sthe\svery\sinformation\syou've\sbeen\slooking\sfor\.\s\sHidden\swithin\sthis\sobscure\stext\sis\sa\sprecise\sdescription\sof\s(.*)\sand\sthe\smeans\sto\screate\sit\.\s\sAt\slast,\syour\ssearch\sis\sover\./
+            @recipe = $1
+            @understanding = ""
+            fput "cheer"
+
+        elsif  line =~ /"Ahem\."\s\sBefore\syou\scan\slay\syour\shands\son\sanything\suseful/
+            self.pay()
+            self.search(topic)
+
+        elsif line =~ /Are\syou\ssure\?|Rather\sthan\sbe\sfrustrated\sby\sany\smore\sdead\sends/
+
+        end
+
+        waitrt?;
+    end
+
+    def self.run(parameters)
+        libraries = [6336]
+
+        timer = Cantrips::Stopwatch.new()
+        timer.start()
+
+        @options = Parser.parse(parameters)
+        start = Room.current.id
+
+        library = Cantrips::Locations.find_nearest(libraries)
+        Cantrips::Locations.go2(library)
+
+        if ( CharSettings['inprogress'].nil? )
+            self.search(@options.skill)
+        elsif ( CharSettings['inprogress'] != @options.skill )
+            self.search("new")
+            self.search("new confirm")
+            self.search(@options.skill)
+        end
+
+        CharSettings['inprogress'] = @options.skill
+        CharSettings.save
+
+        while @recipe.nil?
+            while @understanding != "thorough" && @recipe.nil?
+                self.read
+                self.ponder if @recipe.nil?
+            end
+
+            while @understanding == "thorough"
+                self.read
+            end
+        end
+
+        timer.stop()
+        respond "Total time: #{timer.last} to discover #{@recipe}"
+
+        if ( !GameObj.right_hand.nil? )
+            recipe = $alchemy_recipes.find{|r| r[:nick]==@recipe or r[:product]==@recipe; };
+
+            if recipe.nil?
+                fput "write #{GameObj.right_hand.noun}"
+            end
+        end
+
+        CharSettings['inprogress'] = nil
+        CharSettings.save
+    end
+end
+
+unless defined?($alchemy_recipes) and ($alchemy_recipes.class == Array) and not $alchemy_recipes.empty?
+    start_script 'alchemy-recipes'
+    wait_while { running?('alchemy-recipes') }
+end
+
+args = script.vars.length < 2 ? script.vars : script.vars[1..-1]
+Research.run(args)

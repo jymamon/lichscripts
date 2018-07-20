@@ -1,0 +1,10 @@
+Room.current_or_new
+Room.current.wayto["#{script.vars[1].to_s}"]="#{script.vars[2]}"
+Room.current.timeto["#{script.vars[1].to_s}"]=0.2
+
+if ( reverse_direction(script.vars[2]) && Room["#{script.vars[1].to_s}"].wayto[Room.current.id.to_s].nil? )
+    Room["#{script.vars[1].to_s}"].wayto[Room.current.id.to_s]  = reverse_direction(script.vars[2])
+    Room["#{script.vars[1].to_s}"].timeto[Room.current.id.to_s] = 0.2
+end
+
+echo "Room: #{Room.current.id}"

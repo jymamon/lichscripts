@@ -1,0 +1,23 @@
+# Script to deal with SoS "disarm"
+loop {
+    line = waitfor("form twists and mutates, sprouting scales and cold eyes as it transforms into");
+
+    matchdata = /lashes out and grabs your (?<weapon>.*?)\.  Vile blue-green energy lances down (?:her|his) arm and into the (?:.*?), kindling it into an unholy semblance of life\.  The (?:.*?)'s form twists and mutates, sprouting scales and cold eyes as it transforms into (?:a|an) (?:.*?) (?<snake>[a-z]*)!/.match(line)
+    weapon_type = matchdata["weapon"];
+    snake_type = matchdata["snake"];
+    
+    begin
+        waitrt?
+
+        while muckled?
+            pause 0.25
+        end
+
+        fput "clench #{snake_type}";
+    end while (GameObj.left_hand.noun!=weapon_type && GameObj.right_hand.noun!=weapon_type)
+
+    if GameObj.left_hand.noun==weapon_type && GameObj.right_hand.noun!=weapon_type
+        waitrt?
+        fput "swap"
+    end
+}

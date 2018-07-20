@@ -1,0 +1,21 @@
+LICH_DIR = "R:/Games/lich"
+DATA_DIR = "#{LICH_DIR}/data"
+
+# Logic copied from lich.rbw
+entry_data = File.open("#{DATA_DIR}/boost_entry.dat", 'r') { |file|
+    begin
+        Marshal.load(file.read.unpack('m').first)
+    rescue
+        Array.new
+    end
+}
+
+match = "\\bYou see (#{entry_data.find_all{|f| f[:char_name] != Char.name}.map{|l| l[:char_name]}.join("|")}) waving at your table";
+
+loop {
+    line = waitfor "waving at your table"
+
+    if ( line =~ /#{match}/ )
+        fput "invite #{$1} group"
+    end
+}

@@ -1,0 +1,78 @@
+=begin
+
+Attack - Because I'm lazy
+
+Usage: ;Attack <target>
+
+Current revision: 2016.11.01.01
+
+History
+    2016.11.01.01 - Initial creation based on my old Brawl script.
+
+=end
+
+def kill(target)
+    waitrt?
+
+    # Keep going until it's dead or gone. Hopefully dead.
+    while ( target.status !~ /dead|gone/)
+        waitrt?
+
+        # Don't attack if not standing.
+        until (standing?)
+            fput 'stand'
+        end
+
+        waitrt?
+
+        wait_while { muckled? }
+
+        fput "stance #{UserVars.op['hunting_stance']}"
+        fput "attack ##{target.id}"
+
+        response = waitfor("You can't", "positioning", "Roundtime:", "What were you", "It looks like", "What are you", "A calm washes over you", "Wait", "You are unable", "Try standing", "You are still", "You don't");
+
+        if ( response =~ /What were you|What are you|It looks like|unable|You (don't|can't)|You are still/ )
+            break
+        end
+
+        waitrt?
+        fput "stance defensive"
+    end
+
+    if ( target.status =~ /dead/)
+        start_script "sloot"
+        wait_while{running? "sloot"}
+    end
+end
+
+target = nil
+npcs   = GameObj.npcs.find_all { |i| i.status != 'dead' }
+
+exit unless (npcs.length > 0)
+
+# Accept either an ID, an ID with the '#' prepended, a creature base
+# name, a creature full name, "all", or nothing as options for finding
+# the target.
+if ( script.vars[1].to_s=="all" )
+    npcs.each { |npc|
+        if ( npc.status !~ /dead|gone/ )
+            kill(npc);
+        end
+    }
+    exit
+
+elsif ( script.vars[1].to_s =~ /^#?([0-9]+)$/i )
+    id = $1.to_s
+    target = npcs.find{ |npc|
+        (npc.id == "#{id}")
+     }
+elsif ( ! script.vars[1].nil? )
+    target = npcs.find { |npc|
+        (npc.noun =~ /^#{script.vars[1]}$/i || npc.name=~/^#{script.vars[1]}$/i)
+     }
+else
+    target = npcs[0]
+end
+
+kill(target);

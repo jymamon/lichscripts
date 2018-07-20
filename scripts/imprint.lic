@@ -1,0 +1,58 @@
+=begin
+    imprint - Calculates an empath's chance to imprint
+
+    usage: imprint
+        Adding the option "formula" will print the per-component contributions as well as the final result.
+
+    author: Jymamon (gs4-jymamon@hotmail.com)
+    version: 2018.12.09
+
+    Version history:
+        2018.12.09 - Created
+=end
+
+def effective_influence_bonus
+    return Stats.inf[1] * 2
+end
+
+def effective_lore_ranks
+    return Skills.slblessings + Skills.mltransference + Skills.mltransformation
+end
+
+def effective_skill_ranks
+    return Skills.physicalfitness + Skills.firstaid
+end
+
+def effective_spell_ranks
+    # Spell ranks capped at level + 1 contribution per circle
+    return [Char.level + 1, Spells.minorspirit].min + [Char.level + 1, Spells.majorspirit].min + [Char.level + 1, Spells.empath].min
+end
+
+def scale_contribution(ranks, scale, min_multiplier, divisor_multiplier)
+    contribution = ((scale * (ranks - (Char.level * min_multiplier)))/ (Char.level * divisor_multiplier))
+    return [0, contribution.to_i].max
+end
+
+def influence_contribution
+    return [0, effective_influence_bonus()].max
+end
+
+def lores_contribution
+    return scale_contribution(effective_lore_ranks, 200, 0.5, 3.5)
+end
+
+def skills_contribution
+    return scale_contribution(effective_skill_ranks, 150, 2.0, 4.0)
+end
+
+def spells_contribution
+    return scale_contribution(effective_spell_ranks, 300, 1.5, 1.5)
+end
+
+if Char.prof == "Empath"
+    imprint_chance = (((100 + influence_contribution() + lores_contribution() + skills_contribution() + spells_contribution()) / 10))
+    respond "Formula: ceiling[(100 + INF(#{influence_contribution().round(2)}) + LORES(#{lores_contribution().round(2)}) + SKILLS(#{skills_contribution().round(2)}) + SPELLS(#{spells_contribution().round(2)})) / 10)]" if script.vars[1].include?("formula")
+    respond "Imprint chance: #{imprint_chance}%"
+else
+    respond "You're not an empath. You can't imprint."
+end

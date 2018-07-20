@@ -1,0 +1,37 @@
+=begin
+
+Rummage in your current scrollsack for scrolls with each spell provided, invoke the
+scroll, self cast it, and put the scroll back.  ex. ;scrollcast 101 103 107 202
+
+Current revision: 2010.06.21.01
+
+=end
+
+# Author:   Jymamon (gs4-jymamon@hotmail.com)
+#
+# History:
+#   2010.06.21.01 - Initial creation. Works, but lacks sufficient error checking.
+
+##load "#{$script_dir}\\slib.lic"
+
+full_cmd_line = script.vars.shift
+container     = script.vars.shift
+
+fput "open " + container.to_s
+
+script.vars.each { |spell|
+    waitrt?
+    put "rummage in my " + container.to_s + " spell " + spell.to_s
+    response = waitfor("but can't seem to locate anything with that spell on it","and remove");
+    if ( response =~ /and remove/ )
+        fput "invoke #{spell.to_s}"
+        fput "cast"
+        waitrt?
+        sleep 1
+        fput "put right in my " + container.to_s
+    else
+         echo "No scrolls with spell #{spell.to_s} found. Skipping it."
+    end
+}
+
+fput "close " + container.to_s

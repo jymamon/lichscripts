@@ -1,0 +1,43 @@
+=begin
+Terribly simple script for capture raw data from the server.
+    ;capture <log_name>
+to start.
+    ;k capture
+to end.
+
+Largely just a renamed debuglog.lic that accepts a parameter
+for the log name instead of hardcoding it to be debug-<char>.log.
+
+Current revision: 2009.11.18.01
+=end
+
+# Author:   Jymamon (gs4-jymamon@hotmail.com)
+#
+# History:
+#   2009.11.18.01 Created
+#
+no_pause_all # Don't stop filtering when scripts are paused as it'll lead to
+             # inconsistent user experience.
+
+hide_me      # Work around for kill-all commands in optimus.lic
+
+Settings.load
+
+script.vars.shift
+
+capture_file  = $data_dir + script.vars.shift
+captured      = File.open(capture_file, 'w')
+captured.sync = true;
+
+captured.puts "; Captured at #{Time.now}"
+
+trace_var(:$_SERVERSTRING_) { |str|
+	captured.write str
+}
+
+before_dying {
+	captured.close if !captured.closed?
+	untrace_var(:$_SERVERSTRING_)
+}
+
+sleep

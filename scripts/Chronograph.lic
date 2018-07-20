@@ -1,0 +1,359 @@
+=begin
+Implements ;timer and ;stopwatch commands for using countdown timers and stopwatches
+for tracking user defined events.
+
+Current revision: 2010.01.02.01
+=end
+
+# Author:   Jymamon (gs4-jymamon@hotmail.com)
+#
+# History:
+#   2011.11.11.01 Add offline timers
+#
+#   2010.01.02.01 Auto save between runs. Add default "Chronograph total" stopwatch
+#                 that can be used to track total play time.  On start-up, report
+#                 how long since the last run. (Assuming it's being autostarted by
+#                 lich, this is used to track how long you've been logged off.)
+#
+#   2010.01.01.01 Initial script.
+#
+# To do:
+#   Improve "add" format to allow non-minute inputs on the timers. Support
+#   something like "01:00:34" as well as "1h 34s" to define times.
+#
+
+# This seems suspect, but when having the script auto-start, the initial screen
+# scroll is a bit ... busy.
+sleep 1
+Settings.load
+# Next line copied from infomon.lic. Not sure if it's really necessary.
+sleep(0.1) until Char.name and not Char.name.empty?
+settings = Settings[Char.name]
+settings = Hash.new unless settings
+no_pause_all # Don't stop filtering when scripts are paused as it'll lead to
+             # inconsistent user experience.
+hide_me
+
+#
+# Convert seconds to a more readable output string
+#
+def secondsToPrettyPrint(sec_in)
+    t = sec_in
+    s = 0
+    m = 0
+    h = 0
+
+    if t < 60
+        s = t
+        timestring = sprintf("%d seconds", s)
+
+    else
+        s = t % 60
+        t = (t - s) / 60
+
+        if t < 60
+            m = t
+            timestring = sprintf("%d minute%s %d second%s",
+                                 m.to_i,
+                                 m.to_i==1?"":"s",
+                                 s.to_i,
+                                 s.to_i==1?"":"s")
+
+        else
+            m = t % 60
+            t = (t - m) / 60
+
+            if t < 24
+                h = t
+                timestring = sprintf("%d hour%s %d minute%s %d second%s",
+                                     h.to_i,
+                                     h.to_i==1?"":"s",
+                                     m.to_i,
+                                     m.to_i==1?"":"s",
+                                     s.to_i,
+                                     s.to_i==1?"":"s")
+            else
+                h = t % 24
+                t = (t - h) / 24
+
+                if t!=0
+                    timestring = sprintf("%d day%s %d hour%s %d minute%s %d second%s",
+                                          t.to_i,
+                                          t.to_i==1?"":"s",
+                                          h.to_i,
+                                          h.to_i==1?"":"s",
+                                          m.to_i,
+                                          m.to_i==1?"":"s",
+                                          s.to_i,
+                                          s.to_i==1?"":"s")
+                end
+            end
+        end
+    end
+
+    return timestring
+end
+
+# If any of our settings are missing, get default values.
+if settings['timers'].nil?
+    settings['timers'] = Hash.new
+end
+
+if settings['stopwatches'].nil?
+    settings['stopwatches'] = Hash.new
+end
+
+if settings['offline'].nil?
+    settings['offline'] = Hash.new
+end
+
+# If have a last shutdown value, report amount of inactive time.
+if ! settings['shutdown'].nil?
+    echo "You have been offline for " + secondsToPrettyPrint(Time.now.to_i - settings['shutdown'].to_i)
+else
+    echo "Offline time calculation not available this run."
+end
+
+if script.vars[1].nil?
+    #
+    # Make sure we cleanup on exit and tell the user the state of
+    # any timers that were active.
+    #
+    before_dying {
+        UpstreamHook.remove('chronograph_hook1')
+        UpstreamHook.remove('chronograph_hook2')
+        UpstreamHook.remove('chronograph_hook3')
+
+        settings['timers'].keys.each { |k|
+            if not settings['timers'][k].nil?
+                echo "Timer exiting: " + k.to_s + " " + secondsToPrettyPrint(settings['timers'][k].to_i) + " remaining"
+            end
+        }
+
+        settings['stopwatches'].keys.each { |k|
+            if not settings['stopwatches'][k].nil?
+                echo "Stopwatch exiting: " + k.to_s + " " + secondsToPrettyPrint(settings['stopwatches'][k].to_i) + " elapsed"
+            end
+        }
+
+        settings['offline'].keys.each { |k|
+            if not settings['offline'][k].nil?
+                echo "Stopwatch exiting: " + k.to_s + " " + secondsToPrettyPrint(settings['stopwatches'][k].to_i) + " elapsed"
+            end
+        }
+
+        settings['shutdown'] = Time.now.to_i
+        Settings.load # avoid reverting other character's settings if multiaccounting
+        Settings[Char.name] = settings
+        Settings.save
+    }
+
+    #
+    # Add command hook ;timer (del string|add \d+ string)?
+    #
+    action1 = proc { |client_string|
+        if client_string =~ /^(?:<c>)?#{$clean_lich_char}(?:timer\b(.*)?)/i
+            params = $1.to_s
+
+            if scr = (Script.running + Script.hidden).find { |val| val.name.downcase == 'chronograph' }
+                #
+                # Add a new timer
+                #
+                if params.to_s =~ /add ([0-9]+) (\"?)(.*)(\2)/i
+                    respond "Adding timer \"" + $3.to_s + "\" for " + $1.to_s + " minutes"
+                    settings['timers'][$3.to_s] = $1.to_i * 60
+
+                #
+                # Delete a timer
+                #
+                elsif params.to_s =~ /del (\"?)(.+)(\1)/i
+                    respond "Deleting timer \"" + $2.to_s + "\""
+                    settings['timers'].delete($2.to_s)
+
+                #
+                # Display the state of the active timers
+                #
+                else
+                    if settings['timers'].length==0
+                        respond "No timers active"
+                    else
+                        settings['timers'].keys.each { |k|
+                            if not settings['timers'][k].nil?
+                                respond "Time remaining for \"" + k.to_s  + "\" is " + secondsToPrettyPrint(settings['timers'][k].to_i)
+                            end
+                        }
+                    end
+
+                end
+            end
+            nil
+        else
+            client_string
+        end
+    }
+
+    UpstreamHook.add('chronograph_hook1', action1)
+
+    #
+    # Add command hook for ;stopwatch ((del|add) (string))?
+    #
+    action2 = proc { |client_string|
+        if client_string =~ /^(?:<c>)?#{$clean_lich_char}(?:stopwatch\b(.*)?)/i
+            params = $1.to_s
+
+            if scr = (Script.running + Script.hidden).find { |val| val.name.downcase == 'chronograph' }
+                #
+                # Add a new stopwatch
+                #
+                if params.to_s =~ /add (\"?)(.+)(\1)/i
+                    respond "Adding stopwatch \"" + $2.to_s + "\""
+                    settings['stopwatches'][$2.to_s] = 0
+
+                #
+                # Delete a stopwatch
+                #
+                elsif params.to_s =~ /del (\"?)(.+)(\1)/i
+                    respond "Deleting stopwatch \"" + $2.to_s + "\""
+                    settings['stopwatches'].delete($2.to_s)
+
+                #
+                # Display the state of the active stopwatch
+                #
+                else
+                    if settings['stopwatches'].length==0
+                        respond "No stopwatches active"
+                    else
+                        settings['stopwatches'].keys.each { |k|
+                            if not settings['stopwatches'][k].nil?
+                                respond "Elapsed time for \"" + k.to_s  + "\" is " + secondsToPrettyPrint(settings['stopwatches'][k].to_i)
+                            end
+                        }
+                    end
+
+                end
+            end
+            nil
+        else
+            client_string
+        end
+    }
+
+    UpstreamHook.add('chronograph_hook2', action2)
+
+    #
+    # Add command hook for ;stopwatch ((del|add) (string))?
+    #
+    action3 = proc { |client_string|
+        if client_string =~ /^(?:<c>)?#{$clean_lich_char}(?:offline\b(.*)?)/i
+            params = $1.to_s
+
+            if scr = (Script.running + Script.hidden).find { |val| val.name.downcase == 'chronograph' }
+                #
+                # Add a new stopwatch
+                #
+                if params.to_s =~ /add (\"?)(.+)(\1)/i
+                    respond "Adding offline timer \"" + $2.to_s + "\""
+                    settings['offline'][$2.to_s] = Time.now.to_i;
+
+                #
+                # Delete a stopwatch
+                #
+                elsif params.to_s =~ /del (\"?)(.+)(\1)/i
+                    respond "Deleting offline timer \"" + $2.to_s + "\""
+                    settings['offline'].delete($2.to_s)
+
+                #
+                # Display the state of the active stopwatch
+                #
+                else
+                    if settings['offline'].length==0
+                        respond "No offline timers active"
+                    else
+                        settings['offline'].keys.each { |k|
+                            if not settings['offline'][k].nil?
+                                respond "Elapsed time for \"" + k.to_s  + "\" is " + secondsToPrettyPrint(Time.now.to_i - settings['offline'][k].to_i)
+                            end
+                        }
+                    end
+
+                end
+            end
+            nil
+        else
+            client_string
+        end
+    }
+
+    UpstreamHook.add('chronograph_hook3', action3)
+
+	#
+	# Re-map older global stopwatches to the current name.
+	#
+	if ! settings['stopwatches']['Chronograph total'].nil?
+	    settings['stopwatches']['Total'] = settings['stopwatches']['Chronograph total']
+		settings['stopwatches'].delete('Chronograph total');
+	end
+
+	if ! settings['stopwatches']['"Total"'].nil?
+	    settings['stopwatches']['Total'] = settings['stopwatches']['"Total"']
+		settings['stopwatches'].delete('"Total"');
+	end
+
+    settings['stopwatches']['Total']   = 0 if settings['stopwatches']['Total'].nil?
+    settings['stopwatches']['Session'] = 0
+
+    echo "You can now use ';timers' to manage your timers and ';stopwatch' to measure stopwatches"
+
+    settings['timers'].keys.each { |k|
+        if not settings['timers'][k].nil?
+            echo "Timer loaded: " + k.to_s + " " +  secondsToPrettyPrint(settings['timers'][k].to_i) + " seconds remaining"
+        end
+    }
+
+    settings['stopwatches'].keys.each { |k|
+        if not settings['stopwatches'][k].nil?
+            echo "Stopwatch loaded: " + k.to_s + " " + secondsToPrettyPrint(settings['stopwatches'][k].to_i)
+        end
+    }
+
+    settings['offline'].keys.each { |k|
+        if not settings['offline'][k].nil?
+            echo "Offline timer loaded: " + k.to_s + " " + secondsToPrettyPrint(settings['stopwatches'][k].to_i)
+        end
+    }
+
+    #
+    # Loop forever managing the timers.
+    #
+    i = 0
+
+    while ( 1 )
+        settings['timers'].keys.each { |k|
+            if not settings['timers'][k].nil?
+                settings['timers'][k] = settings['timers'][k] - 1
+                if settings['timers'][k]==0
+                    echo "Timer done: " + k.to_s
+                    settings['timers'].delete(k.to_s)
+                end
+            end
+        }
+
+        settings['stopwatches'].keys.each { |k|
+            if not settings['stopwatches'][k].nil?
+                settings['stopwatches'][k] = settings['stopwatches'][k] + 1
+            end
+        }
+        sleep 1
+
+        i += 1;
+
+        if ( i>=60 ) 
+            Settings.load # avoid reverting other character's settings if multiaccounting
+            Settings[Char.name] = settings
+            Settings.save
+            i = 0
+        end
+    end
+else
+    respond  "USAGE: ;chronograph"
+end

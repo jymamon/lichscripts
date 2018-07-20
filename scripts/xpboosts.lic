@@ -1,0 +1,49 @@
+absorb_proc = proc {
+    boost_out = false
+    
+    while (!boost_out)
+        while (percentmind < 100)
+            pause 10
+        end
+
+        response = dothistimeout("boost absorb", 5, /You do not have any Instant Mind Clearers|You have instantly absorbed/);
+
+        if (response =~ /You do not have/)
+            boost_out = true
+        end
+        
+        pause 5
+    end
+}
+
+longterm_proc = proc {
+    boost_out = false 
+    while (!boost_out)
+        while (percentmind < 90)
+            pause 1
+        end
+
+        response = dothistimeout("boost longterm", 5, /You do not have any Long-Term Experience Boosts to redeem\.|You have deducted 500 experience points from your field experience/);
+
+        if (response =~ /You do not have/)
+            boost_out = true
+        end
+        
+        pause 5
+    end
+}
+
+args = script.vars.length < 2 ? script.vars : script.vars[1..-1]
+
+if ( !args.any? )
+    #args.push("absorb")
+    args.push("longterm")    
+end
+
+if ( args.include?("absorb") )
+    absorb_proc.call    
+end
+
+if ( args.include?("longterm") )
+    longterm_proc.call
+end

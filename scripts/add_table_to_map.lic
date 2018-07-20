@@ -1,0 +1,13 @@
+newTable = Map.current_or_new
+
+if ( newTable.title[0] =~ /\[(.*) Table\]/ )
+    tableName = $1.to_s
+    fput "out"
+    
+    Room.current.timeto["#{newTable.id}"] = 0.2
+    Room.current.wayto["#{newTable.id}"] = StringProc.new("table = \"#{tableName}\"; response = dothistimeout(\"go \#{table} table\", 25, /You (?:and your group )?head over to|inviting you to join|invites you/); if response =~ /inviting|invites you/ then fput \"go \#{table} table\" end;");
+    Room["#{newTable.id}"].timeto["#{Room.current.id}"] = 0.2
+    Room["#{newTable.id}"].wayto["#{Room.current.id}"] = "out"
+else
+    respond "#{Room.current.title[0]} doesn't look like a table name!"
+end
