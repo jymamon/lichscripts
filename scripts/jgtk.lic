@@ -4,37 +4,51 @@
     This is a reusable module for other scripts.  You don't need to
     run it directly in any fashion.
 
-    It should be noted that this isn't intended to expose all of
-    GTK.  Use GTK directly if you need that.  This is an attempt to
-    make simple windows simpler because I hate GUI work.
-
     author: Jymamon (gs4-jymamon@hotmail.com)
        game: Gemstone
        tags: utility
     version: 2017.01.13.01
        repo: https://github.com/jymamon/lichscripts
-    
+
     history:
         2017.01.13.01 - Split GTK wrapper into JGTK
 =end
+=begin
+    It should be noted that this isn't intended to expose all of
+    GTK.  Use GTK directly if you need that.  This is an attempt to
+    make simple windows simpler because I hate GUI work.
+=end
 
-module JGTK
+module Jgtk
     if $development
-        # Before exiting, undef the class so we can redefine them next run.
         before_dying {
-            echo "Cleaning up JGTK"
+            echo "Cleaning up #{self}"
 
-            JGTK.constants.each{|c|
-                echo "-- Removing #{c}"
-                JGTK.send(:remove_const, c)
-            }
+            begin
+                self.constants.each{|c|
+                    echo "-- Removing #{c}"
+                    self.send(:remove_const, c)
+                }
+
+                metaclass = class << self; self end
+                self.instance_methods.each{|method_name|
+                    metaclass.class_eval{
+                        echo "-- Removing #{method_name.to_sym}"
+                        undef_method(method_name.to_sym)
+                    }
+                }
+
+                echo "-- Removing #{self}"
+                Object.send(:remove_const, "#{self}")
+            rescue
+            end
         }
     end
 
     class Widget ; end
     class Table < Widget ; end
 
-    def JGTK.version
+    def Jgtk.version
         return "2017.01.13.01"
     end
 
@@ -85,9 +99,7 @@ module JGTK
                         @action = :exit
                     }
 
-                    # Show the window
                     @window.show
-                    # Keep it above the client window.
                     @window.keep_above = true
                 }
 
@@ -191,8 +203,13 @@ module JGTK
 
     end
 
+    # GridView is very much in progress
     class GridView < Widget
         attr_reader :model, :grid
+
+        def values
+            return @grid.model
+        end
 
         def text
             if @grid.selection.nil?
@@ -506,7 +523,7 @@ module JGTK
                 @notebook.signal_connect_after('switch-page') {|me, page, number|
                     Gtk.queue {
                         begin
-                            @pages[number].container.activate
+                            @pages[number].container.on_activate
                         rescue
                             echo "switch-page error"
                             echo "#{$!.backtrace.join("\n\t")}"
@@ -523,7 +540,7 @@ module JGTK
         end
 
         def add_page(page)
-            label = JGTK::Label.new(page.title)
+            label = Jgtk::Label.new(page.title)
             @pages.push(page)
 
             Gtk.queue {

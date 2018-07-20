@@ -24,7 +24,7 @@
 if File.file?("#{$script_dir}/cantrips.lic")
     load("#{$script_dir}/cantrips.lic")
 else
-    echo "\n\ncantrips.lic is required: ';repos download cantrips.lic'\n\n"
+    echo "\n\ncantrips.lic is required: ';repos download cantrips.lic'\n\n"
     exit
 end
 
@@ -153,19 +153,28 @@ class Purify
                 "Sing Roundtime",
                 "Spell Hindrance",
                 "song misfires",
-                "You must be holding")
+                "You must be holding",
+                "no effect")
 
             nextline = get
 
             if result =~ /shatter/
-                result= "shattered"
+                result = "shattered"
             elsif result =~ /cannot be/
                 wait_until('Waiting on mana...') { mana(15) }
 
+                if (  GameObj.right_hand.noun=='runestaff' )
+                    fput "swap"
+                end
+                
                 fput("loresing #{gem.noun}#{@@loresong}")
 
                 result = waitfor("pulse", "pulses", "draw power", "gem of some kind")
                 waitrt?
+
+                if ( GameObj.left_hand.noun=='runestaff' )
+                    fput "swap"
+                end
 
                 if result =~ /pulse|pulses/
                     echo("*** THIS GEM IS MAGE RECHARGABLE ***")
@@ -173,12 +182,12 @@ class Purify
                 elsif result =~ /you feel it trying to draw power from you/
                     result = "orb"
                 else
-                    result ="gem"
+                    result = "gem"
                 end
             elsif nextline =~ /very essence/
                 # From the original pure.lic. Not verified.
                 result = "orb"
-            elsif result =~ /smoother and more pure in color|crack|somewhat/
+            elsif result =~ /filling the imperfections|smoother and more pure in color|crack|somewhat|no effect/
                 result= "gem"
             elsif result =~ /What were|cannot|must be holding|song misfires/
                 # This is a lie, but it has the effective result desired.
@@ -216,7 +225,7 @@ class Purify
         # -----------------------------------------------------------------------------
         Cantrips::Containers.open(options.lootsack.id)
 
-        gems = Cantrips::Containers.find_loot_by_pattern(Cantrips::Patterns.gems, options.lootsack.id)
+        gems = Cantrips::Containers.find_loot_by_pattern(Cantrips::Patterns.allgems, options.lootsack.id)
 
         gems.each {|gem|
             timer.start()
@@ -241,14 +250,13 @@ class Purify
                     wait_while { stunned? }
 
                     if (Wounds.rightHand!=0 || Wounds.leftHand!=0)
-                        if ( checkpcs("Rovich") )
-                            fput "nudge Rovich";
+                        if ( checkpcs("Acolius") || checkpcs("Rovich") )
                             while Wounds.rightHand!=0 || Wounds.leftHand!=0
                                 sleep 1
                             end
                         else
                             returnHere = Room.current.id
-                            start_script("useherbs", ["--buy-missing=on", "--use-mending=on"])
+                            start_script("useherbs", ["--buy=on", "--mending=on"])
                             wait_while{running? "useherbs"}
                             Cantrips::Locations.go2(returnHere)
                         end
@@ -263,16 +271,24 @@ class Purify
                         sleep 30
                         fput "exit"
                     end
+
                     shattered += 1
 
                 else
                     echo "Unexpected result from purifying: #{result}"
                     exit
-            end
+                end
 
             # Timer includes healing time after shattering a gem.
             timer.stop()
             Cantrips::Message.bold "Last gem took #{timer.last}."
+
+            1.upto(10) {
+                break if GameObj.right_hand.id != gem.id
+                pause 0.1
+            }
+
+            break if GameObj.right_hand.id == gem.id
         }
 
         Cantrips::Containers.close(options.lootsack.id)

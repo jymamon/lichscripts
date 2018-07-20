@@ -4,14 +4,19 @@
                ground for routines I find myself needing more than once.
 
     author: Jymamon (gs4-jymamon@hotmail.com)
-    version: 2016.10.18.01
+    version: 2017.12.31.01
 
     history:
-    - 2016.10.18.01 ScriptSettings extensions
-    - 2016.04.04.01 Items.find includes room object (GameObj.loot)
+    - 2017.12.31.01 Extend Room to add .includes?(character_name)
 =end
 =begin
     Older history
+    - 2017.12.10.01 Location.reachable? added
+    - 2017.12.09.01 Ebon Gate gems. Pattern tweaks. Formatting.
+    - 2017.05.04.01 If calling find with an object, just return the object
+    - 2017.01.27.01 add Locations.getsilvers
+    - 2016.10.18.01 - deprecated -
+    - 2016.04.04.01 Items.find includes room object (GameObj.loot)
     - 2016.10.18.01 CharSettings extensions
     - 2015.05.28.01 AsyncScripts & Helper classes
     - 2015.05.27.01 Still more gems. Teras & FWI
@@ -33,8 +38,30 @@
 #
 # Jymamon's general purpose support routine library.
 #
-$cantrips_version = "2016.10.18.01"
+$cantrips_version = "2017.12.31.01"
 $CantripsVer = $cantrips_version # For backward compatibility
+
+class Array
+    def except(value)
+        if value.class == Array
+            return self.reject{|i| value.include?(i)}
+        else
+            return self - [value]
+        end
+    end
+end
+
+class Map
+    def includes?(charname)
+        found = GameObj.pcs.find{|pc| pc.name.downcase == charname.downcase}
+        return !found.nil?
+    end
+
+    def distance_to(roomid)
+        path = path_to(roomid)
+        return path.nil? ? 99999 : path.length
+    end
+end
 
 class Cantrips
     def Cantrips.version
@@ -112,7 +139,8 @@ class Cantrips
             waitrt?
             result = dothistimeout("close ##{id}",
                                    3,
-                                   /^That\sis\salready\sclosed\.$|
+                                   /you flip open|
+                                    ^That\sis\salready\sclosed\.$|
                                     ^You\sclose|
                                     ^You\sadjust|
                                     ^Pulling\son\sthe\sdrawstrings\stightly|
@@ -180,7 +208,8 @@ class Cantrips
                                    /^That\sis\salready\sopen\.$|
                                     ^You\s(adjust|open)\sthe\sfolds\sof\syour|
                                     ^You\sopen|
-                                    ^There\sdoesn't\sseem\sto\sbe\sany\sway\sto\sdo\sthat\.$/x);
+                                    ^There\sdoesn't\sseem\sto\sbe\sany\sway\sto\sdo\sthat\.$|
+                                    ^But it's already open\.$/x);
             waitrt?
             return;
         end
@@ -191,6 +220,10 @@ class Cantrips
             if noun.nil?
                 echo "Can't find a nil item!"
                 return nil
+            end
+
+            if ( noun.class == GameObj )
+                return noun
             end
 
             unless item = (
@@ -261,7 +294,7 @@ class Cantrips
         def self.find_nearest(target_list)
             start_room   = Room.current
             previous, shortest_distances = Map.dijkstra(Room.current.id.to_i)
-            target_list = target_list.sort{|a,b| shortest_distances[a]<=>shortest_distances[b]};
+            target_list = target_list.reject{|t| shortest_distances[t].nil?}.sort{|a,b| shortest_distances[a]<=>shortest_distances[b]};
             return target_list[0]
         end
 
@@ -277,6 +310,9 @@ class Cantrips
                     waitcastrt?
                 end
 
+            elsif ( Spell[213].known? && Spell[213].affordable? )
+                Spell[213].cast
+                waitcastrt?
             end
 
             fput "open ##{container.id}"
@@ -355,6 +391,27 @@ class Cantrips
                 wait_while{running? "go2"}
             end
         end
+
+        def self.getsilvers(amount)
+            self.go_dothis_and_return("bank", Proc.new { fput "withdraw #{amount}"; });
+        end
+
+        def self.go_dothis_and_return(room, action)
+            returnto = Room.current.id
+            self.go2(room);
+            action.call();
+            self.go2(returnto);
+        end
+
+        def self.reachable?(roomid)
+            if Room.current.id == roomid
+                return true
+            end
+
+            previous, shortest_distances = Map.dijkstra(Room.current.id, roomid)
+            return previous[roomid]
+        end
+
     end
 
     class Magic
@@ -423,185 +480,258 @@ class Cantrips
         # a regexp of all gem nouns for other scrips to use. For gems, GameObj types don't
         # always seem to work for some reason.
         def self.gems
-            gem_patterns = [ "((?:banded|lace blue|chameleon|cloud|fire|frost|moss|mottled|tigereye) agate)",
-                             "((teardrop of green|some polished dark blue|piece of golden) amber)",
-                             "(deep purple amethyst)",
-                             "(azurite)",
-                             "((?:azure|crimson|golden|emerald) blazestar)",
-                             "(blood(?:jewel|stone))",
-                             "(dark red-green bloodstone)",
-                             "(bright bluerock)",
-                             "(deep red carbuncle)",
-                             "pieceof (white chalcedony)",
-                             "((?:some polished |piece of )(?:black|blue|pink|red|flower) coral)", # Blue ridge and cat's (paw|eye) coral doesn't seem to go in jars?!
-                             "(blue cordierite)",
-                             "(corestone)",
-                             "((?:cinnabar|glaesine|quartz|rock|dragonmist|tigerfang) crystal)",
-                             "(deathstone)$",
-                             "(scarlet despanal)",
-                             "((?:blue|dragon\'s-tear|dwarf-cut|black|purple stormcloud|yellow|uncut(?: (star-of-Tamzyrr|maernstrike))?) diamond)",
-                             "(star diopside)",
-                             "((?:hazy (red)|smooth (green)|round amber|mist blue) sea glass (disk))",
-                             "(doomstone)",
-                             "((?:black|blue|green|pink|red|yellow|white) dreamstone)",
-                             "(gold dust)",
-                             "((?:dragonfire|dragon\'s-tear|dwarf-cut|uncut|eye-of-Koar|star) emerald)",
-                             "(blue eostone)",
-                             "(olivine faenor-bloom)",
-                             "((?:bronze|copper|gold|iron|mithril|platinum|silver|steel|urglaes) fang)",
-                             "(chalky cube of feldspar)",
-                             "((?:violet|periwinkle) feystone)",
-                             "(firestone)",
-                             "((?:almandine|blood red|green|orange spessartine|wyrm\'s eye|dark purple sunset) garnet)",
-                             "((?:blood red|green|spessartine|wyrm\'s eye) garnet)",
-                             "((?:bright |green |golden )?(?:ametrine|aquamarine|chrysoberyl|blue|red|beryl|chrysoprase) gem)",
-                             "(small (?:green|purple|red) geode)",
-                             "((?:brilliant )?(?:lilac|cerulean|clear|golden|green|peach|smoky|ultramarine) glimaerstone)",
-                             "((?:rosette of crystalline )gypsum)",
-                             "(petrified haon)",
-                             "(pale yellow heliodor)",
-                             "(mirrored orb of hematite)",
-                             "(yellow hyacinth)",
-                             "(polished ivory)",
-                             "(fiery jacinth)",
-                             "((?:brown|green|white|yellow) jade)",
-                             "((?:black|red|yellow|(?:ovoid|cone|nodule|piece) of(?: (black|red|yellow|peacock|leopard|lunar|monsoon|ember))?) jasper)",
-                             "(piece of (?:black|green|pink|white) marble)",
-                             "(piece of petrified (maoral|modwir))",
-                             "((?:shimmering nodule of )(marcasite))",
-                             "((?:glossy (?:sable|pale beige)) mekret)",
-                             "(mica)",
-                             "(mithril-bloom)",
-                             "((?:pale blue|cats-eye|golden|opaline|pale green|silvery|blue|grey|black) moonstone)",
-                             "(mother-of-pearl)",
-                             "(oblong piece of nephrite)",
-                             "((?:gold|platinum) nugget)",
-                             "((?:spiderweb )?obsidian)",
-                             "((?:piece of banded|black) ?onyx)",
-                             "((?:aster|black|boulder|dragonfire|fire|moonglae|white|frost|purple|blue green lagoon|purple black thunderhead) opal)",
-                             "(green ora-bloom)",
-                             "((?:firemote|shadowglass) orb)",
-                             "((?:(?:tiny|small|medium|large) )?(?:black|fire|green|grey|iridescent|midnight blue|pink|white) pearl)",
-                             "(peridot)",
-                             "(pyrite)",
-                             "((?:(piece|shard|irregular cluster) of |some )?(?:asterfire|blue|carnelian|citrine|leopard|milky|rose|rainbow|tangerine|smoky|cat's eye|dragonfire) quartz)",
-                             "(golden rhimar-bloom)",
-                             "(Alhan'aht rivertear)",
-                             "cluster of (?:(orange|pink|red|yellow) roestone)",
-                             "(rift(?:shard|stone))",
-                             "(rosespar)",
-                             "((?:dragon\'s-tear|dwarf-cut|star|uncut|sylvarraend|pale pink mistvein) ruby)",
-                             "((?:star|uncut) ruby)",
-                             "(sandsilver)",
-                             "(?:silvery mint green moth|vibrant hummingbird|(?:bright orange|iridescent azure) butterfly|russet and cream moth|silver firefly)( saewehna)",
-                             "((?:blue|green|pink|star|violet|yellow|white|(?:blue|lavender) shimmarglin|clear|dragonsbreath|mermaid's-tear|dragonseye|dwarf-cut|pale water|pale mistvein) sapphire)",
-                             "(umber sard)",
-                             "(shimmertine shard)",
-                             "((?:inky blue|scarlet|violet) (smoldereye))",
-                             "(viridian soulstone)",
-                             "((?:black|brown|white|yellow) sphene)",
-                             "(spherine)",
-                             "((?:blue|pink|red|violet) spinel)",
-                             "(fossilized sponge)",
-                             "((?:green|blue|red|white) starstone)",
-                             "((?:banded sardonyx|alexandrite|green aventurine|green malachite|iridescent labradorite|light pink morganite|pink rhodochrosite|polished jet|turquoise) stone)",
-                             "(jet stone)",
-                             "(sunstone)",
-                             "(sapphire talon)",
-                             "(petrified thanot)",
-                             "(purple thunderstone)",
-                             "((?:blue|clear|golden|green errisian|orange imperial|pink|smoky) topaz)",
-                             "((?:blue|golden|errisian|imperial|pink|smoky) topaz)",
-                             "((?:black|blue|clear|green|pink) tourmaline)",
-                             "(spiderweb turquoise)",
-                             "(argent vultite-bloom)",
-                             "((?:twisted (nacreous) blue) waterweb)",
-                             "((?:crystal of (?:silvery|shadowy) )wraithaline)",
-                             "(wyrdshard)",
-                             "((?:brown|clear|green|snowflake|yellow) zircon)",
-                             "((?:green|yellow) zircon)",
-                             "some (blue lapis) lazuli",
-                             "(?:Kezmonian )(honey beryl)",
-                             "(sardonyx)"
-                     ]
-
+            gem_patterns = [
+                        "((?:banded|lace blue|chameleon|cloud|fire|frost|moss|mottled|tigereye) agate)",
+                        "((teardrop of green|some polished dark blue|piece of golden|droplet of honey) amber)",
+                        "(deep purple|shadow) amethyst",
+                        "(azurite)",
+                        "((?:azure|crimson|golden|emerald) blazestar)",
+                        "(blood(?:jewel|stone))",
+                        "(dark red-green bloodstone)",
+                        "(bright bluerock)",
+                        "(deep red carbuncle)",
+                        "piece of white chalcedony",
+                        "marbled green chrysoprase",
+                        "radiant green cinderstone",
+                        "((?:some polished |piece of )(?:black|blue|pink|red|flower|cat's-paw) coral)", # Blue ridge and cat's (paw|eye) coral doesn't seem to go in jars?!
+                        "(blue cordierite)",
+                        "(corestone)",
+                        "age-darkened ivory crescent",
+                        "((?:cinnabar|glaesine|quartz|rock|dragonmist|tigerfang|tangerine wulfenite) crystal)",
+                        "(deathstone)$",
+                        "(scarlet despanal)",
+                        "((?:blue|dragon\'s-tear|dwarf-cut|black|purple stormcloud|yellow|uncut(?: (star-of-Tamzyrr|maernstrike))?) diamond)",
+                        "(star diopside)",
+                        "((?:hazy (red)|smooth (green)|round amber|mist blue) sea glass (disk))",
+                        "(doomstone)",
+                        "((?:black|blue|green|pink|red|yellow|white) dreamstone)",
+                        "(gold dust)",
+                        "((?:dragonfire|dragon\'s-tear|dwarf-cut|uncut|eye-of-Koar|star) emerald)",
+                        "(blue eostone)",
+                        "(olivine faenor-bloom)",
+                        "((?:bronze|copper|gold|iron|mithril|platinum|silver|steel|urglaes) fang)",
+                        "(chalky cube of feldspar)",
+                        "((?:violet|periwinkle) feystone)",
+                        "(firestone)",
+                        "((?:almandine|blood red|green|orange spessartine|wyrm\'s eye|dark purple sunset|lustrous black) garnet)",
+                        "((?:blood red|green|spessartine|wyrm\'s eye) garnet)",
+                        "((?:bright |green |golden )?(?:ametrine|aquamarine|chrysoberyl|blue|red|beryl|chrysoprase|flawless aquamarine|ethereal blue) gem)",
+                        "(small (?:green|purple|red) geode)",
+                        "((?:brilliant )?(?:lilac|cerulean|clear|golden|green|peach|smoky|ultramarine) glimaerstone)",
+                        "oblong blue goldstone",
+                        "((?:rosette of crystalline )gypsum)",
+                        "(petrified haon)",
+                        "(pale yellow heliodor)",
+                        "(sphere of scratched|mirrored orb of) hematite",
+                        "(yellow hyacinth)",
+                        "(polished ivory)",
+                        "(fiery jacinth)",
+                        "((?:brown|green|white|yellow) jade)",
+                        "((?:black|red|yellow|(?:ovoid|cone|nodule|piece) of(?: (black|red|yellow|peacock|leopard|lunar|monsoon|ember))?) jasper)",
+                        "(piece of (?:black|green|pink|white) marble)",
+                        "(piece of petrified (maoral|modwir))",
+                        "((?:shimmering nodule of )(marcasite))",
+                        "((?:glossy (?:sable|pale beige)) mekret)",
+                        "(mica)",
+                        "(mithril-bloom)",
+                        "((?:pale blue|cats-eye|golden|opaline|pale green|silvery|blue|grey|black) moonstone)",
+                        "(mother-of-pearl)",
+                        "(oblong piece of nephrite)",
+                        "((?:gold|platinum|small copper) nugget)",
+                        "((?:spiderweb )?obsidian)",
+                        "((?:piece of banded|black) ?onyx)",
+                        "((?:aster|black|boulder|dragonfire|fire|moonglae|white|frost|purple|blue green lagoon|purple black thunderhead|iridescent wood|blue sky) opal)",
+                        "(green ora-bloom)",
+                        "((?:firemote|shadowglass|black-cored emerald) orb)",
+                        "((?:(?:tiny|small|medium|large) )?(?:black|fire|green|grey|iridescent|midnight blue|pink|white) pearl)",
+                        "(peridot)",
+                        "(pyrite)",
+                        "((?:(piece|shard|irregular cluster) of |some )?(?:asterfire|blue|carnelian|citrine|leopard|milky|rose|rainbow|tangerine|smoky|cat's eye|dragonfire) quartz)",
+                        "(golden rhimar-bloom)",
+                        "(Alhan'aht rivertear)",
+                        "cluster of (?:(orange|pink|red|yellow) roestone)",
+                        "(rift(?:shard|stone))",
+                        "(rosespar)",
+                        "((?:dragon\'s-tear|dwarf-cut|star|uncut|sylvarraend|pale pink mistvein) ruby)",
+                        "((?:star|uncut) ruby)",
+                        "(sandsilver)",
+                        "(?:silvery mint green moth|vibrant hummingbird|(?:bright orange|iridescent azure) butterfly|russet and cream moth|silver firefly)( saewehna)",
+                        "((?:blue|green|pink|star|violet|yellow|white|(?:blue|lavender) shimmarglin|clear|dragonsbreath|mermaid's-tear|dragonseye|dwarf-cut|pale water|pale mistvein|pale oasis) sapphire)",
+                        "umber sard",
+                        "((shimmertine|cloudy alexandrite) shard)",
+                        "((?:inky blue|scarlet|violet) (smoldereye))",
+                        "(viridian soulstone)",
+                        "((?:black|brown|white|yellow) sphene)",
+                        "(spherine)",
+                        "((?:blue|pink|red|violet) spinel)",
+                        "(fossilized sponge)",
+                        "((?:green|blue|red|white) starstone)",
+                        "((?:banded sardonyx|alexandrite|green aventurine|green malachite|iridescent labradorite|light pink morganite|pink rhodochrosite|polished jet|turquoise|brilliant red firebird) stone)",
+                        "(jet stone)",
+                        "(sunstone)",
+                        "(sapphire talon)",
+                        "(petrified thanot)",
+                        "(purple thunderstone)",
+                        "((?:blue|clear|golden|green errisian|orange imperial|pink|smoky) topaz)",
+                        "dark turquoise stone",
+                        "faint gold tempest stone",
+                        "slice of ribbon stone",
+                        "silver-cored vortex stone",
+                        "pale grey tempest stone",
+                        "dark blue tempest stone",
+                        "uncut sunstone",
+                        "Phoen's eye topaz",
+                        "piece of striated fluorite",
+                        "teardrop of dark green heliotrope",
+                        "faceted blood red sandruby",
+                        "fossilized bessho lizard spur",
+                        "variegated violet tanzanite",
+                        "sliver of bright green viridine",
+                        "((?:blue|golden|errisian|imperial|pink|smoky) topaz)",
+                        "((?:black|blue|clear|green|pink) tourmaline)",
+                        "(spiderweb turquoise)",
+                        "(argent vultite-bloom)",
+                        "((?:twisted (nacreous) blue) waterweb)",
+                        "((?:crystal of (?:silvery|shadowy) )wraithaline)",
+                        "(wyrdshard)",
+                        "((?:brown|clear|green|snowflake|yellow) zircon)",
+                        "((?:green|yellow) zircon)",
+                        "some (blue lapis) lazuli",
+                        "(?:Kezmonian )(honey beryl)",
+                        "hexagonal cobalt blue beryl",
+                        "(sardonyx)",
+                        "white-point star diamond",
+                        "ice blue diamond",
+                        "nebulous emerald",
+                        "haloed Reim ruby",
+                        "large yellow diamond",
+                        "pale gold firefly saewehna",
+                        "deep blue mermaid's-tear sapphire",
+                        "green alexandrite stone",
+                        "piece of leopard skin jasper",
+                        "spar of dull hematite",
+                        "blackish blue idocrase",
+                        "spear of lavender-grey iolite",
+                        "shard of pink petalite",
+                        "square of shale rock",
+                        "shard of pale grey shadowglass",
+                        "swirled lightning glass shard",
+                        "rough-edged matte white soulstone",
+                        "fractured ebon-tinged soulstone",
+                        "twisted iron spiral",
+                        "round of milky amber",
+                        "chunk of sand-smoothed chalcedony",
+                        "uncut dark crimson diamond",
+                        "piece of black jade",
+                        "pebble of orbicular jasper",
+                        "cluster of fire opal",
+                        "smooth blue-green fire opal",
+                        "purple plum-shaped pearl",
+                        "snow quartz",
+                        "faceted deep blood red ruby",
+                        "impure blood red ruby",
+                        "pallid sapphire",
+                        "deep umber paw-shaped stone",
+                        "blue-green chrysocolla stone",
+                        "cluster of sky blue crystal",
+                        "piece of jet-flecked ivory",
+                        "smoky amethyst",
+                        "piece of blue jade",
+                        "ebon-cored vortex stone",
+                        "chunk of snowy white ice stone",
+                        "chunk of pale blue ice stone",
+                        "luminous prehnite",
+                        "heart of blue onyx",
+                        "cloud opal",
+                        "jelly opal",
+                        "chunk of pearly grey ice stone",
+                        "shifting multihued auboraline",
+                        "dull grey crystal",
+                        "bright violet feystone",
+                        "frosty pale violet pearl",
+                        "absinthe green pearl",
+                        "jewel-toned dragonfly saewehna",
+                        "flame-banded gold chameleon agate",
+                        "gently sloped green moss agate",
+                        "thin shard of iridescent fire agate",
+                        "round of gnat-filled amber",
+                        "slice of gold-blended ametrine",
+                        "fragment of lilac-toned amethyst",
+                        "brilliant teal-laced azurite",
+                        "scintillating scarlet red blazestar",
+                        "inky-cored vivid carmine bloodjewel",
+                        "cluster of gingery golden chrysoberyl",
+                        "clouded maize-colored citrine",
+                        "sharply cut salorisa pink diamond",
+                        "pale metallic silver mistvein diamond",
+                        "flawless argent-white diamond",
+                        "purple stormcloud diamond",
+                        "pale-edged powder blue dreamstone",
+                        "smooth black umber-suffused dreamstone",
+                        "black-rayed celadon star emerald",
+                        "heart-shaped aqua green emerald",
+                        "multi-faceted sky blue feystone",
+                        "six-pointed rich sanguine garnet",
+                        "beryl green crystal-filled geode",
+                        "pristine smoky violet glimaerstone",
+                        "rosette of crystalline gypsum",
+                        "teardrop of mauve petrified haon",
+                        "dainty orb of primrose yellow heliodor",
+                        "cushion-cut ember orange hyacinth",
+                        "bronze-tinged lambent yellow jacinth",
+                        "slim bar of woodland green jade",
+                        "pyrite-capped vibrant blue lapis lazuli",
+                        "small disk of velvety green malachite",
+                        "cyan-haloed creamy ivory moonstone",
+                        "silver-washed celestial blue moonstone",
+                        "purple black thunderhead opal",
+                        "pearlescent raven black opal",
+                        "some pellucid blue-green ora-bloom",
+                        "frosty pale violet pearl",
+                        "glimmering magnolia white pearl",
+                        "oversized shadowy purple pearl",
+                        "trilliant-cut yellow-green peridot",
+                        "tiny prism of wintry blue peridot",
+                        "triangular pastel rainbow quartz",
+                        "hazy shard of faint pink rose quartz",
+                        "cube of sheer blossom pink rosespar",
+                        "wheel-incised incarnadine ruby",
+                        "coin-sized seafoam white sandsilver",
+                        "pale mistvein sapphire",
+                        "silver-swept blue mistvein sapphire",
+                        "honey-tinted indigo water sapphire",
+                        "dark-veined apple green turquoise",
+                        "crystal of shadowy wraithaline",
+                        "silver firefly saewehna",
+                        "dark grey dreamstone fragment",
+                        "chunk of bronzite",
+                        "shifting multihued auboraline",
+                        "dull grey crystal",
+                        "some golden rhimar-bloom",
+                        "unfaceted mistvein diamond",
+                        "slice of pale bone white agate",
+                        "stellular dragon's-tear diamond",
+                        "radiant lush viridian star emerald",
+                        "ebon-cored ruddy almandine garnet",
+                        "teardrop of murky sanguine ruby",
+                        "blackened feystone core",
+                        "cabochon of milky azure aquamarine",
+                        "thin blade of verdant sea glass",
+                        "round disk of green sea glass",
+                        "misty silver crystalline spiral",
+                        "grooved burnt orange sea star",
+                        "prismatic rose-gold fire agate",
+                        "wedge of ocher and ebony ambergris",
+                        "spiny fan of lustrous black coral",
+                        "limpid dark indigo tidal pearl",
+                        "rich cerulean mermaid's-tear sapphire",
+                        "honey-washed violet water sapphire",
+                    ]
             return("^(?:#{gem_patterns.join('|')})$")
         end
 
-        def self.drgems
-            drgem_patterns = [
-                                "flame-banded gold chameleon agate",
-                                "gently sloped green moss agate",
-                                "thin shard of iridescent fire agate",
-                                "round of gnat-filled amber",
-                                "slice of gold-blended ametrine",
-                                "fragment of lilac-toned amethyst",
-                                "brilliant teal-laced azurite",
-                                "scintillating scarlet red blazestar",
-                                "inky-cored vivid carmine bloodjewel",
-                                "cluster of gingery golden chrysoberyl",
-                                "clouded maize-colored citrine",
-                                "sharply cut salorisa pink diamond",
-                                "pale metallic silver mistvein diamond",
-                                "flawless argent-white diamond",
-                                "purple stormcloud diamond",
-                                "pale-edged powder blue dreamstone",
-                                "smooth black umber-suffused dreamstone",
-                                "black-rayed celadon star emerald",
-                                "heart-shaped aqua green emerald",
-                                "multi-faceted sky blue feystone",
-                                "six-pointed rich sanguine garnet",
-                                "beryl green crystal-filled geode",
-                                "pristine smoky violet glimaerstone",
-                                "rosette of crystalline gypsum",
-                                "teardrop of mauve petrified haon",
-                                "dainty orb of primrose yellow heliodor",
-                                "cushion-cut ember orange hyacinth",
-                                "bronze-tinged lambent yellow jacinth",
-                                "slim bar of woodland green jade",
-                                "pyrite-capped vibrant blue lapis lazuli",
-                                "small disk of velvety green malachite",
-                                "cyan-haloed creamy ivory moonstone",
-                                "silver-washed celestial blue moonstone",
-                                "purple black thunderhead opal",
-                                "pearlescent raven black opal",
-                                "some pellucid blue-green ora-bloom",
-                                "frosty pale violet pearl",
-                                "glimmering magnolia white pearl",
-                                "oversized shadowy purple pearl",
-                                "trilliant-cut yellow-green peridot",
-                                "tiny prism of wintry blue peridot",
-                                "triangular pastel rainbow quartz",
-                                "hazy shard of faint pink rose quartz",
-                                "cube of sheer blossom pink rosespar",
-                                "wheel-incised incarnadine ruby",
-                                "coin-sized seafoam white sandsilver",
-                                "pale mistvein sapphire",
-                                "silver-swept blue mistvein sapphire",
-                                "honey-tinted indigo water sapphire",
-                                "dark-veined apple green turquoise",
-                                "crystal of shadowy wraithaline",
-                             ]
-
-            return("^(?:(#{drgem_patterns.join('|')}))$")
-        end
-
-        def self.reimgems
-            reimgem_patterns = [
-              "chunk of pale blue ice stone",
-              "chunk of pearly grey ice stone",
-              "pale grey tempest stone",
-              "silver-cored vortex stone",
-              "faint gold tempest stone",
-              "dark blue tempest stone",
-              "chunk of snowy white ice stone",
-            ]
-
-            return("^(?:(#{reimgem_patterns.join('|')}))$")
-        end
-
         def self.allgems
-            return("(#{Cantrips::Patterns.gems}|#{Cantrips::Patterns.drgems}|#{Cantrips::Patterns.reimgems})")
+            return("(#{Cantrips::Patterns.gems})")
         end
     end
 
@@ -634,11 +764,12 @@ class Cantrips
 
                 if t < 60
                     m = t
-                    timestring = sprintf("%d minute%s %d second%s",
+                    timestring = sprintf(
+                       "%d minute%s %d second%s",
                         m.to_i,
-                        m.to_i==1?"":"s",
+                        m.to_i==1 ? "" : "s",
                         s.to_i,
-                        s.to_i==1?"":"s")
+                        s.to_i==1 ? "" : "s")
 
                 else
                     m = t % 60
@@ -648,11 +779,11 @@ class Cantrips
                         h = t
                         timestring = sprintf("%d hour%s %d minute%s %d second%s",
                             h.to_i,
-                            h.to_i==1?"":"s",
+                            h.to_i==1 ? "" : "s",
                             m.to_i,
-                            m.to_i==1?"":"s",
+                            m.to_i==1 ? "" : "s",
                             s.to_i,
-                            s.to_i==1?"":"s")
+                            s.to_i==1 ? "" : "s")
                     else
                         h = t % 24
                         t = (t - h) / 24
@@ -660,13 +791,13 @@ class Cantrips
                         if t!=0
                             timestring = sprintf("%d day 0 hour%s %d minute%s %d second%s",
                                 t.to_i,
-                                t.to_i==1?"":"s",
+                                t.to_i==1 ? "" : "s",
                                 h.to_i,
-                                h.to_i==1?"":"s",
+                                h.to_i==1 ? "" : "s",
                                 m.to_i,
-                                m.to_i==1?"":"s",
+                                m.to_i==1 ? "" : "s",
                                 s.to_i,
-                                s.to_i==1?"":"s")
+                                s.to_i==1 ? "" : "s")
                         end
                     end
                 end

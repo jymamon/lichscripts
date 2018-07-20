@@ -117,5 +117,6 @@ while line = get
 
         settings['deaths'].push([death_time.to_i, Stats.exp]);
         respond("Time of death #{Time.at(death_time)}. Experience at death: #{Stats.exp}")
+        Settings.save
     end
 end

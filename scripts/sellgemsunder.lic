@@ -21,7 +21,7 @@
 if File.file?("#{$script_dir}/cantrips.lic")
     load("#{$script_dir}/cantrips.lic")
 else
-    echo "\n\ncantrips.lic is required: ';repos download cantrips.lic'\n\n"
+    echo "\n\ncantrips.lic is required: ';repos download cantrips.lic'\n\n"
     exit
 end
 
@@ -31,6 +31,8 @@ end
 
 
 class GemSeller
+    attr_reader :value
+    
     def initialize(value)
         @value = value.to_i
     end
@@ -56,7 +58,7 @@ class SellGemsUnder
             args = Options.new()
 
             # defaults
-            args.value    = 3000
+            args.value    = 1000
             args.lootsack = Vars.lootsack
 
             opt_parser = OptionParser.new { |opts|
@@ -66,7 +68,7 @@ class SellGemsUnder
                     args.lootsack = parameter
                 }
 
-                opts.on("-vVALUE", "--value=VALUE", "Value under which gems should be sold. Defaults to 3000.") { |parameter|
+                opts.on("-vVALUE", "--value=VALUE", "Value under which gems should be sold. Defaults to 1000.") { |parameter|
                     args.value = parameter.to_i
                 }
 

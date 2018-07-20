@@ -7,10 +7,10 @@
      author: Jymamon (gs4-jymamon@hotmail.com)
        game: Gemstone
        tags: forage,foraging,bounties,603
-    version: 2016.12.23.01
+    version: 2018.01.06.01
 
     history:
-        2016.12.23.01 Work with copy/paste of foraging bounty text
+        2018.01.06.01 Better ayana foraging
         2015.04.02.01 Random updates post 2.5 year hiatus
         2011.07.17.01 Initial version based on pure.lic
 
@@ -22,14 +22,13 @@
 if File.file?("#{$script_dir}/cantrips.lic")
     load("#{$script_dir}/cantrips.lic")
 else
-    echo "\n\ncantrips.lic is required: ';repos download cantrips.lic'\n\n"
+    echo "\n\ncantrips.lic is required: ';repos download cantrips.lic'\n\n"
     exit
 end
 
-if ( $CantripsVer < "2015.04.02.01" )
+if ( $CantripsVer < "2017.12.31.01" )
     Cantrips::Message.bold "-- Running with an untested version of cantrips.  This may not work."
 end
-
 
 class Forage
     # -----------------------------------------------------------------------------
@@ -48,7 +47,7 @@ class Forage
             args.number    = 5
 
             opt_parser = OptionParser.new { |opts|
-                opts.banner = "Usage: Purify.lic [options]"
+                opts.banner = "Usage: Forage.lic [options]"
 
 
                 opts.on("-iINGREDIENT", "--ingredient=INGREDIENT", "What to forage for. Required.") { |parameter|
@@ -114,14 +113,12 @@ class Forage
 
             # Tranlate to game objects
             args.container  = Cantrips::Items.find(args.container)
-
-            return args
-        end
+            return args        end
     end
 
     def Forage.parse_bounty(text)
         results = Hash.new
-        if ( text =~ /requires (?:a |an )?(.*) (?:grows |found )(?:on |in )(.*?)(?:(?: between| near| under) .*)?\.  These samples must be in pristine condition.  You have been tasked to retrieve (\d+)(?: more)? sample(s)?\./ )
+        if ( text =~ /requires (?:a |an )?(.*) (?:grows |found )(?:on |in )(.*?)(?:(?: between| near| under) .*)?\.  These samples must be in pristine condition.  You have been tasked to retrieve (\d+)(?: more)? sample(s)?/ )
             results[:ingredient] = $1
             results[:location] = $2
             results[:number] = $3.to_i
@@ -140,11 +137,18 @@ class Forage
         # For the 10 nearest rooms that contain the forageable
         rooms = Array.new
         if (options.ingredient=~/\bayana\b/)
-            rooms = Room.current.find_all_nearest_by_tag("ayana weed")
+            rooms = Room.current.find_all_nearest_by_tag("ayana lichen")        
+            rooms.concat Room.current.find_all_nearest_by_tag("ayana weed")
             rooms.concat Room.current.find_all_nearest_by_tag("ayana berry")
             rooms.concat Room.current.find_all_nearest_by_tag("ayana lichen")
             rooms.concat Room.current.find_all_nearest_by_tag("ayana leaf")
             rooms.concat Room.current.find_all_nearest_by_tag("ayana root")
+
+            rooms = rooms.select {|room|
+                Room.current.distance_to(room) < 200;
+            }
+
+            rooms = rooms.sort{|a,b| Room.current.distance_to(a) <=> Room.current.distance_to(b); }
         else
             rooms = Room.current.find_all_nearest_by_tag(options.ingredient)
         end
@@ -170,6 +174,8 @@ class Forage
             base.gsub!("ayana root", "ayana leaf");
             base.gsub!("dark pink rain lily", "pink rain lily");
             base.gsub!("fragrant white lily", "white lily");
+            base.gsub!("orange tiger lily", "tiger lily");
+            base.gsub!("small green olive", "green olive");
 
             # Find the shortest path to the room.
             previous, shortest_distances = Room[start].dijkstra(room)
@@ -177,7 +183,7 @@ class Forage
             # Threshold check so I don't accidently find myself running
             # from EN to WL unexpectedly.
             if shortest_distances[room] > 50
-                respond "Distance is greater than threshold from start room. To go there, unpause the script.  To abort, kill the script."
+                respond "Distance to #{room} is greater than threshold from start room. To go there, unpause the script.  To abort, kill the script."
                 pause_script
             end
 
@@ -185,8 +191,18 @@ class Forage
             Cantrips::Locations.go2(room)
 
             # Forage up to 5 of the forageable.
-            n = Cantrips::Locations.forage(options.ingredient, [5,options.number].min, options.container)
-            respond "Found #{n} #{options.ingredient}"
+            if !GameObj.pcs.reject{|pc| ["Acolius", "Daedus", "Mataki", "Lelqui", "Jymamon", "Mark", "Mjuerkattd", "Mjudasq", "Dynad", "Pynavuli", "Malphix"].include?(pc.noun)}.any?
+                if !GameObj.npcs.any?{|npc| npc.type =~ /aggressive/}
+                    n = Cantrips::Locations.forage(options.ingredient, [5,options.number].min, options.container)
+                    respond "Found #{n} #{options.ingredient}"
+                else
+                    n = 0
+                end
+
+            else
+                n = 0
+            end
+
 
             # Decrement the number needed
             options.number -= n
@@ -196,7 +212,7 @@ class Forage
         }
 
         # Back to where we started
-         Cantrips::Locations.go2(start)
+        Cantrips::Locations.go2(start)
 
         timer.stop()
 

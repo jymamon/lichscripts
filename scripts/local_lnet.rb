@@ -1,7 +1,7 @@
 =begin
     Local character DRb server
 
-    ;local_lich --help
+    ;local_lnet --help
 
     author: Jymamon (gs4-jymamon@hotmail.com)
        game: Gemstone
@@ -12,6 +12,7 @@
 
 require 'drb'
 
+#SERVER_URI="druby://#{ENV["COMPUTERNAME"]}:20002"
 SERVER_URI="druby://localhost:20002"
 
 class Characters
@@ -73,5 +74,13 @@ class Characters
     end
 end
 
-DRb.start_service SERVER_URI, Characters.new
+characters = Characters.new
+DRb.start_service SERVER_URI, characters
+
+Thread.new {
+    pause 10
+    characters.check
+    characters.members().each{|m| puts "#{m.name} connected"};
+}
+
 DRb.thread.join

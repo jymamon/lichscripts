@@ -3,7 +3,9 @@ require 'drb'
 # This should not be hardcoded. Need to investigate using a local Rhinda (or Rhinda-like) servive
 # to make it discoverable. The goal is no IG character communication should be necessary to get
 # the client and server talking.
+#SERVER_URI="druby://#{ENV["COMPUTERNAME"]}:20002"
 SERVER_URI="druby://localhost:20002"
+echo "URI is #{SERVER_URI}"
 
 hide_me
 
@@ -62,7 +64,8 @@ class RemoteChar
             end
 
         end
-        raise NoMethodError
+
+        raise NoMethodError, "Can't find method #{method} for remote character"
     end
 
     # ---------------------------------------------------------------------------------------------
@@ -175,6 +178,10 @@ class RemoteChar
         Stats.level
     end
 
+    def Name
+        Char.name
+    end
+
     def Exp
         return Stats.exp
     end
@@ -184,41 +191,41 @@ class RemoteChar
     end
 
     def Wounds
-        return { "left eye"   => XMLData.injuries["leftEye"  ]['wound'], 
-                 "right eye"  => XMLData.injuries["rightEye" ]['wound'], 
-                 "head"       => XMLData.injuries["head"     ]['wound'], 
-                 "neck"       => XMLData.injuries["neck"     ]['wound'], 
-                 "back"       => XMLData.injuries["back"     ]['wound'], 
-                 "chest"      => XMLData.injuries["chest"    ]['wound'], 
-                 "abdomen"    => XMLData.injuries["abdomen"  ]['wound'], 
-                 "left arm"   => XMLData.injuries["leftArm"  ]['wound'], 
-                 "right arm"  => XMLData.injuries["rightArm" ]['wound'], 
-                 "right hand" => XMLData.injuries["rightHand"]['wound'], 
-                 "left hand"  => XMLData.injuries["leftHand" ]['wound'], 
-                 "left leg"   => XMLData.injuries["leftLeg"  ]['wound'], 
-                 "right leg"  => XMLData.injuries["rightLeg" ]['wound'], 
-                 "left foot"  => XMLData.injuries["leftFoot" ]['wound'], 
-                 "right foot" => XMLData.injuries["rightFoot"]['wound'], 
+        return { "left eye"   => XMLData.injuries["leftEye"  ]['wound'],
+                 "right eye"  => XMLData.injuries["rightEye" ]['wound'],
+                 "head"       => XMLData.injuries["head"     ]['wound'],
+                 "neck"       => XMLData.injuries["neck"     ]['wound'],
+                 "back"       => XMLData.injuries["back"     ]['wound'],
+                 "chest"      => XMLData.injuries["chest"    ]['wound'],
+                 "abdomen"    => XMLData.injuries["abdomen"  ]['wound'],
+                 "left arm"   => XMLData.injuries["leftArm"  ]['wound'],
+                 "right arm"  => XMLData.injuries["rightArm" ]['wound'],
+                 "right hand" => XMLData.injuries["rightHand"]['wound'],
+                 "left hand"  => XMLData.injuries["leftHand" ]['wound'],
+                 "left leg"   => XMLData.injuries["leftLeg"  ]['wound'],
+                 "right leg"  => XMLData.injuries["rightLeg" ]['wound'],
+                 "left foot"  => XMLData.injuries["leftFoot" ]['wound'],
+                 "right foot" => XMLData.injuries["rightFoot"]['wound'],
                  "nerves"     => XMLData.injuries["nsys"     ]['wound']
               };
     end
- 
+
     def Scars
-        return { "left eye"   => XMLData.injuries["leftEye"  ]['scar'], 
-                 "right eye"  => XMLData.injuries["rightEye" ]['scar'], 
-                 "head"       => XMLData.injuries["head"     ]['scar'], 
-                 "neck"       => XMLData.injuries["neck"     ]['scar'], 
-                 "back"       => XMLData.injuries["back"     ]['scar'], 
-                 "chest"      => XMLData.injuries["chest"    ]['scar'], 
-                 "abdomen"    => XMLData.injuries["abdomen"  ]['scar'], 
-                 "left arm"   => XMLData.injuries["leftArm"  ]['scar'], 
-                 "right arm"  => XMLData.injuries["rightArm" ]['scar'], 
-                 "right hand" => XMLData.injuries["rightHand"]['scar'], 
-                 "left hand"  => XMLData.injuries["leftHand" ]['scar'], 
-                 "left leg"   => XMLData.injuries["leftLeg"  ]['scar'], 
-                 "right leg"  => XMLData.injuries["rightLeg" ]['scar'], 
-                 "left foot"  => XMLData.injuries["leftFoot" ]['scar'], 
-                 "right foot" => XMLData.injuries["rightFoot"]['scar'], 
+        return { "left eye"   => XMLData.injuries["leftEye"  ]['scar'],
+                 "right eye"  => XMLData.injuries["rightEye" ]['scar'],
+                 "head"       => XMLData.injuries["head"     ]['scar'],
+                 "neck"       => XMLData.injuries["neck"     ]['scar'],
+                 "back"       => XMLData.injuries["back"     ]['scar'],
+                 "chest"      => XMLData.injuries["chest"    ]['scar'],
+                 "abdomen"    => XMLData.injuries["abdomen"  ]['scar'],
+                 "left arm"   => XMLData.injuries["leftArm"  ]['scar'],
+                 "right arm"  => XMLData.injuries["rightArm" ]['scar'],
+                 "right hand" => XMLData.injuries["rightHand"]['scar'],
+                 "left hand"  => XMLData.injuries["leftHand" ]['scar'],
+                 "left leg"   => XMLData.injuries["leftLeg"  ]['scar'],
+                 "right leg"  => XMLData.injuries["rightLeg" ]['scar'],
+                 "left foot"  => XMLData.injuries["leftFoot" ]['scar'],
+                 "right foot" => XMLData.injuries["rightFoot"]['scar'],
                  "nerves"     => XMLData.injuries["nsys"     ]['scar']
               };
     end
@@ -344,8 +351,12 @@ class RemoteChar
                                                                              "unknown" };
     end
 
+    def Room
+        return Map.current
+    end
+
     def ScriptStart(script_name,cli_vars=[],flags=Hash.new)
-        start_script(script_name,cli_vars,flags)
+        start_script(script_name, cli_vars, flags)
     end
 
     def ScriptStop(*target_names)
@@ -359,13 +370,17 @@ class RemoteChar
     def ScriptResume(*target_names)
         unpause_script(target_names)
     end
+    
+    def ScriptRunning(script)
+        return running?(script)
+    end
 
     def Do(message, *waitingfor)
         fput(message, waitingfor)
     end
 
     def Spell(id, target=nil)
-        fput "prepare id"
+        fput "prepare #{id}"
         fput "cast #{target.nil? ? '' : target}"
         #Spell[id].cast(target)
     end
@@ -373,7 +388,7 @@ class RemoteChar
 end
 
 # -------------------------------------------------------------------------------------------------------
-# CLIENT CODE - This currently presumes local_lnet.rb was started in another process
+# CLIENT CODE - This currently presumes DrbSrv.rbw was started in another process
 # -------------------------------------------------------------------------------------------------------
 
 # Start DRb and attach to our expected service
@@ -381,8 +396,8 @@ DRb.start_service
 
 # Create an RemoteChar instance of ourself and add it to the server's group
 me = RemoteChar.new(Char)
-service = DRbObject.new_with_uri(SERVER_URI)
-service.add_character(me)
+$service = DRbObject.new_with_uri(SERVER_URI)
+$service.add_character(me)
 
 # Join the DRb thread to keep the client running
 Thread.new { DRb.thread.join }
@@ -398,24 +413,24 @@ before_dying {
 remote_char_do = proc {|who,what|
 
     if ( who.downcase == "all" )
-        service.characters.sort.each{ |name|
+        $service.characters.sort.each{ |name|
             if name != Char.name.downcase # Don't give ourselves a remote command
                 respond "called for #{name} '#{what}'"
                 begin
-                    service.character_hash[name].commands = service.character_hash[name].commands.push(what)
+                    $service.character_hash[name].commands = $service.character_hash[name].commands.push(what)
                 rescue
-                    service.del_character(name)
+                    $service.del_character(name)
                 end
 
             end
         }
 
-    elsif service.characters.include?(who.downcase)
+    elsif $service.characters.include?(who.downcase)
             respond "called for #{who} '#{what}'"
             begin
-                service.character_hash[who.downcase].commands = service.character_hash[who.downcase].commands.push(what)
+                $service.character_hash[who.downcase].commands = $service.character_hash[who.downcase].commands.push(what)
             rescue
-                service.del_character(who.downcase)
+                $service.del_character(who.downcase)
             end
     else
 
@@ -437,6 +452,11 @@ tell_uphook = proc { |client_string|
         end
 
         nil
+
+    elsif client_string =~ /^(?:<c>)?#{$clean_lich_char}(?:chars)/i
+        $service.characters.sort.each{ |name| respond "#{name} is connected"; }
+        nil
+
     else
         client_string
     end

@@ -1,93 +1,106 @@
-require 'drb'
+if $frontend == 'stormfront'
+    require 'drb'
 
-# This should not be hardcoded. Need to investigate using a local Rhinda (or Rhinda-like) servive
-# to make it discoverable. The goal is no IG character communication should be necessary to get
-# the client and server talking.
-SERVER_URI="druby://localhost:20002"
+    # This should not be hardcoded. Need to investigate using a local Rhinda (or Rhinda-like) service
+    # to make it discoverable. The goal is no IG or lnet character communication should be necessary
+    # to get the client and server talking.
+    #SERVER_URI="druby://#{ENV["COMPUTERNAME"]}:20002"
+    SERVER_URI="druby://localhost:20002"
 
-# Start up the DRb client since that's what we'll use to get a pointer to the objects
-# registered with it.
-DRb.start_service
+    # Start up the DRb client since that's what we'll use to get a pointer to the objects
+    # registered with it.
+    DRb.start_service
 
-# Attach the client to the DRb server above
-service = DRbObject.new(nil, SERVER_URI)
+    # Attach the client to the DRb server above
+    service = DRbObject.new(nil, SERVER_URI)
 
-# Create the SF window we'll be updating and clear out any stale display. The positioning is just default,
-# SF will honor where the user has positioned it if this isn't the first time the window has been opened.
-puts "<openDialog type='dynamic' id='hmo' title='My HMO' resident='true' main' height='300' width='200'>" +
-     "<dialogData id='hmo'></dialogData></openDialog>"
+    # Create the SF window we'll be updating and clear out any stale display. The positioning is just default,
+    # SF will honor where the user has positioned it if this isn't the first time the window has been opened.
+    puts "<openDialog type='dynamic' id='hmo' title='My HMO' resident='true' main' height='300' width='200'>" +
+         "<dialogData id='hmo'></dialogData></openDialog>"
 
-# I hate having insanely long puts() below. Use this sprintf() to clean it up a bit.
-image_format = " <menuImage id='%s' name='%s' exist='0' align='nw' top='%d' left='%d' height='%d' width='%d'/> "
+    # I hated having insanely long puts() below. Use this sprintf() to clean it up a bit.
+    image_format = " <menuImage id='%s' name='%s' exist='0' align='nw' top='%d' left='%d' height='%d' width='%d'/> "
 
-# Again, an infinite loop in our first rev. Here, we just keep the window above up to date with the
-# current status affects of our followers.
-while ( true )
-    panel_text = "<dialogData id='hmo' clear='t'></dialogData><dialogData id='hmo'>"
+    # Again, an infinite loop in our first rev. Here, we just keep the window above up to date with the
+    # current status affects of our followers.
+    while ( true )
+        panel_text = "<dialogData id='hmo' clear='t'></dialogData><dialogData id='hmo'>"
 
-    i = 0
+        i = 0
 
-    service.members.sort.each { |name, char|
-        begin
-            #next if name.downcase == Char.name.downcase
+        service.members.sort.each { |name, char|
+            begin
+                # Initially, I skipped having "self" show up.  Turns out, it is useful to have it so there's
+                # one spot to see everyone's status.  Uncomment the next line to get the old behavior.
+                #next if name.downcase == Char.name.downcase
+                
+                # Spacing.  If I were being clever, each row would be an object with correctly calculated
+                # height.  I'm being lazy instead.
+                from_top = i * (25 + 35)
 
-            from_top = i * 25
+                # Character name as a clickable link.
+                panel_text += " <menuLink  id='hmo#{i}' value='#{char.name}' exist='#{char.charid.to_s}' noun='#{name}' align='nw' top='" + (from_top).to_s + "'  left='0' height='18' width='60'/>"
 
-            # Character name as a clickable link.
-            panel_text += " <menuLink  id='hmo#{i}' value='#{char.name}' exist='#{char.charid.to_s}' noun='#{name}' " +
-                          "align='nw' top='" + (i*25).to_s + "'  left='0' height='18' width='60'/>"
+                # Set the icons for this character
+                # --------------------------------- ID ------  Icon  -------  VertPos -- HorzPos - H -  W
+                if ( char.sitting? )
+                    panel_text += image_format % [ "sta#{i}", "IconSITTING",  from_top,     60,   23,  18 ]
+                end
 
-            # Set the icons for this character
-            # --------------------------------- ID ------  Icon  -------  VertPos -- HorzPos - H -  W
-            if ( char.sitting? )
-                panel_text += image_format % [ "sta#{i}", "IconSITTING",  from_top,     60,   23,  18 ]
+                if ( char.kneeling? )
+                    panel_text += image_format % [ "sta#{i}", "IconKNEELING", from_top,     60,   23,  15 ]
+                end
+
+                if ( char.prone? )
+                    # This just looks silly unless we move it a bit lower
+                    panel_text += image_format % [ "sta#{i}", "IconPRONE",    from_top + 5, 60,   13,  25 ]
+                end
+
+                if ( char.standing? )
+                    panel_text += image_format % [ "sta#{i}", "IconSTANDING", from_top,     60,   25,  16 ]
+                end
+
+                if ( char.poisoned? )
+                    panel_text += image_format % [ "poi#{i}", "IconPOISONED", from_top,     85,   18,   9 ]
+                end
+
+                if ( char.bleeding? )
+                    panel_text += image_format % [ "ble#{i}", "IconBLEEDING", from_top,     95,   18,   9 ]
+                end
+
+                if ( char.diseased? )
+                    panel_text += image_format % [ "dis#{i}", "IconDISEASED", from_top,    105,   18,   9 ]
+                end
+
+                if ( char.stunned? )
+                    panel_text += image_format % [ "stu#{i}", "IconSTUNNED",  from_top,    115,   18,   9 ]
+                end
+
+                if ( char.webbed? )
+                   panel_text += image_format % [ "web#{i}", "IconWEBBED",    from_top,    125,   15,  15 ]
+                end
+
+                if ( char.dead? )
+                   panel_text += image_format % [ "dea#{i}", "IconDEAD",      from_top,    140,   18,  18 ]
+                end
+
+                # Provide the health bar for the character.
+                health_text  = "Health #{char.Health['current']}/#{char.Health['max']}"
+                health_value = (100 * (char.Health['current'].to_f/char.Health['max'])).to_i
+
+                panel_text +=  "<progressBar id='health#{i}'    top='#{from_top + 30}' left='0' width='175' height='15' value='#{health_value}' text='#{health_text}'/>"
+                i += 1
+
+            rescue
+                service.del_character(name)
             end
+        }
 
-            if ( char.kneeling? )
-                panel_text += image_format % [ "sta#{i}", "IconKNEELING", from_top,     60,   23,  15 ]
-            end
-
-            if ( char.prone? )
-                # This just looks silly unless we move it a bit lower
-                panel_text += image_format % [ "sta#{i}", "IconPRONE",    from_top + 5, 60,   13,  25 ]
-            end
-
-            if ( char.standing? )
-                panel_text += image_format % [ "sta#{i}", "IconSTANDING", from_top,     60,   25,  16 ]
-            end
-
-            if ( char.poisoned? )
-                panel_text += image_format % [ "poi#{i}", "IconPOISONED", from_top,     85,   18,   9 ]
-            end
-
-            if ( char.bleeding? )
-                panel_text += image_format % [ "ble#{i}", "IconBLEEDING", from_top,     95,   18,   9 ]
-            end
-
-            if ( char.diseased? )
-                panel_text += image_format % [ "dis#{i}", "IconDISEASED", from_top,    105,   18,   9 ]
-            end
-
-            if ( char.stunned? )
-                panel_text += image_format % [ "stu#{i}", "IconSTUNNED",  from_top,    115,   18,   9 ]
-            end
-
-            if ( char.webbed? )
-               panel_text += image_format % [ "web#{i}", "IconWEBBED",    from_top,    125,   15,  15 ]
-            end
-
-            if ( char.dead? )
-               panel_text += image_format % [ "dea#{i}", "IconDEAD",      from_top,    140,   18,  18 ]
-            end
-
-            i += 1
-
-        rescue
-            service.del_character(name)
-        end
-    }
-
-    panel_text += "</dialogData>"
-    puts panel_text
-    pause 0.5
+        panel_text += "</dialogData>"
+        puts panel_text
+        pause 0.5;
+    end
+else
+    respond "This script requires StormFront."
 end

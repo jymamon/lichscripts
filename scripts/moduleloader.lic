@@ -14,7 +14,7 @@
 module ModuleLoader
     # My own little standard. Don't expect this to work in general. Casing on modulename
     # must match casing used for module declaration.
-    def self.get_module_version(modulename)
+    def ModuleLoader.get_module_version(modulename)
         # eval isn't a great choice here, but I see no equivalent for instance_variable_get
         # for a global and this is the best I've been able to determine
         eval "#{modulename}.version"

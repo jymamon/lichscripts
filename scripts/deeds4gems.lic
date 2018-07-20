@@ -9,6 +9,9 @@
     - Ta'Illstim
     - Wehnimer's Landing
 
+    In progress:
+    - Teras Isle
+
     These three don't seem to follow the normal formula for cost
     for high level characters regardless of if considering gems
     at value or at 3x value. The steps have been confirmed with
@@ -17,12 +20,14 @@
     - Solhaven
     - Vornavis Caravansary
 
+    At level 6 with 22 deeds, the current formula is failing.  Incorrect
+    racial adjustment for trading? (Erithian in WL)
+
     Working on:
     - Zul Logoth
 
     Future work:
     - Icemule
-    - Teras Islse
 
     Not bothering with:
     - Hearthstone Manor
@@ -31,11 +36,12 @@
      author: Jymamon (gs4-jymamon@hotmail.com)
        game: Gemstone
        tags: deeds
-    version: 2016.11.21.01
+    version: 2017.02.06.01
 =end
 
 =begin
     history:
+        2017.02.06.01 Teras Isle stubbed in
         2016.11.21.01 Add adjustments for trading
         2015.04.01.01 Rename because Gems2Deeds was taken while I was on hiatus.
         2015.03.31.01 Added Zul Logoth
@@ -49,7 +55,7 @@
 if File.file?("#{$script_dir}/cantrips.lic")
     load("#{$script_dir}/cantrips.lic")
 else
-    echo "\n\ncantrips.lic is required: ';repos download cantrips.lic'\n\n"
+    echo "\n\ncantrips.lic is required: ';repos download cantrips.lic'\n\n"
     exit
 end
 
@@ -58,12 +64,56 @@ if ( $CantripsVer < "2015.03.31.01" )
 end
 
 class Deeds4Gems
+    @@symbols = [
+        nil,           #  0 - unused. Here to allow array.index(x) not need adjusted
+        "star",        #  1
+        "ant",         #  2
+        "dandelion",   #  3
+        "topaz",       #  4
+        "bird",        #  5
+        "child",       #  6
+        "seven",       #  7
+        "egg",         #  8
+        "growth",      #  9
+        "person",      # 10
+        "hole",        # 11
+        "rock",        # 12
+        "childhood",   # 13
+        "sun",         # 14
+        "bee",         # 15
+        "rose tree",   # 16
+        "amber",       # 17
+        "deer",        # 18
+        "man",         # 19
+        "twenty",      # 20
+        "drakeling",   # 21
+        "harvest",     # 22
+        "couple",      # 23
+        "burrow",      # 24
+        "boulder",     # 25
+        "adulthood",   # 26
+        "earth",       # 27
+        "worm",        # 28
+        "mushroom",    # 29
+        "quartz",      # 30
+        "wolf",        # 31
+        "woman",       # 32
+        "thirty-three",# 33
+        "Dragon",      # 34
+        "winter",      # 35
+        "family",      # 36
+        "cavern",      # 37
+        "mountain",    # 38
+        "dotage",      # 39
+        "death"        # 40
+    ]
+
     # -----------------------------------------------------------------------------
     # Option parsing/setup
     # -----------------------------------------------------------------------------
     require 'optparse'
 
-    Options = Struct.new(:bigspender, :gemsack, :maxdeeds, :noprompt, :richierich)
+    Options = Struct.new(:bigspender, :gemsack, :maxdeeds, :noprompt, :richierich, :usesilvers)
 
     class Parser
         def self.parse(options)
@@ -94,6 +144,10 @@ class Deeds4Gems
 
                 opts.on("-r", "--richie-rich", "Don't limit yourself to deed methods that count gems at 3x value.") {
                     args.richierich = true
+                }
+
+                opts.on("-s", "--silvers", "Use silvers instead of gems.") {
+                    args.usesilvers = true
                 }
 
                 opts.on("-h", "--help", "Prints this help") {
@@ -159,27 +213,28 @@ class Deeds4Gems
         # if nil, value was not available in the wiki and will be treated as 0. Not all of these are
         # used here, but list them all for future re-use
         town_trading_modifier = {
-            "Sylvarraend"               => { "Human" =>  -10, "Elf" => nil, "Dwarf" => -15, "Giantman" =>  -5, "Halfling" => nil, "Half-Elf" => -15, "Dark Elf" =>  -25, "Sylvankind" =>   0, "Burghal Gnome" => -15, "Forest Gnome" => nil, "Half-Krolvin" => -15, "Erithian" =>  -5, "Aelotoi" => nil}, 
-            "Ta'Illistim"               => { "Human" =>  -10, "Elf" =>   5, "Dwarf" => -15, "Giantman" =>  -5, "Halfling" =>  -5, "Half-Elf" => -15, "Dark Elf" =>  -25, "Sylvankind" =>   0, "Burghal Gnome" =>  -5, "Forest Gnome" =>  -5, "Half-Krolvin" => -15, "Erithian" =>  -5, "Aelotoi" =>  -5}, 
-            "Ta'Vaalor"                 => { "Human" =>  -10, "Elf" =>   5, "Dwarf" => -15, "Giantman" =>  -5, "Halfling" =>  -5, "Half-Elf" => -15, "Dark Elf" =>  -25, "Sylvankind" =>   0, "Burghal Gnome" =>  -5, "Forest Gnome" =>  -5, "Half-Krolvin" => -15, "Erithian" =>  -5, "Aelotoi" =>  -5}, 
-            "Cysaegir"                  => { "Human" =>   -5, "Elf" =>   0, "Dwarf" =>  -5, "Giantman" =>   0, "Halfling" =>  -5, "Half-Elf" =>  -5, "Dark Elf" =>    0, "Sylvankind" =>   0, "Burghal Gnome" =>  -5, "Forest Gnome" =>  -5, "Half-Krolvin" => -15, "Erithian" =>  -5, "Aelotoi" =>   5}, 
-            "the Isle of Four Winds"    => { "Human" =>    0, "Elf" =>   0, "Dwarf" =>   0, "Giantman" =>   0, "Halfling" =>   0, "Half-Elf" =>   0, "Dark Elf" =>    0, "Sylvankind" =>   0, "Burghal Gnome" =>   0, "Forest Gnome" =>   0, "Half-Krolvin" =>   0, "Erithian" =>   0, "Aelotoi" =>   0}, 
-            "Icemule Trace"             => { "Human" =>    0, "Elf" =>   0, "Dwarf" =>   0, "Giantman" => nil, "Halfling" =>   5, "Half-Elf" =>   0, "Dark Elf" =>   -5, "Sylvankind" =>   0, "Burghal Gnome" =>  -5, "Forest Gnome" =>   0, "Half-Krolvin" =>   0, "Erithian" =>   0, "Aelotoi" =>   0}, 
-            "Khazar's Hold"             => { "Human" =>  nil, "Elf" => nil, "Dwarf" =>   0, "Giantman" => nil, "Halfling" => nil, "Half-Elf" => nil, "Dark Elf" =>  -25, "Sylvankind" =>   0, "Burghal Gnome" =>   0, "Forest Gnome" => nil, "Half-Krolvin" => nil, "Erithian" => nil, "Aelotoi" => nil}, 
-            "the Northern Caravansary"  => { "Human" =>    0, "Elf" => nil, "Dwarf" => nil, "Giantman" =>   0, "Halfling" => nil, "Half-Elf" =>   0, "Dark Elf" =>   -5, "Sylvankind" =>   0, "Burghal Gnome" =>  -5, "Forest Gnome" => nil, "Half-Krolvin" => nil, "Erithian" => nil, "Aelotoi" => nil}, 
-            "the Pinefar Trading Post"  => { "Human" =>    0, "Elf" => nil, "Dwarf" =>   0, "Giantman" =>   0, "Halfling" =>   5, "Half-Elf" => nil, "Dark Elf" =>   -5, "Sylvankind" =>   0, "Burghal Gnome" =>   0, "Forest Gnome" => nil, "Half-Krolvin" => nil, "Erithian" => nil, "Aelotoi" => nil}, 
-            "River's Rest"              => { "Human" =>    5, "Elf" => -10, "Dwarf" =>   0, "Giantman" =>   0, "Halfling" =>   0, "Half-Elf" =>  -5, "Dark Elf" =>  -15, "Sylvankind" =>  -5, "Burghal Gnome" =>   0, "Forest Gnome" =>   0, "Half-Krolvin" => -15, "Erithian" =>  -5, "Aelotoi" =>  -5}, 
-            "the free port of Solhaven" => { "Human" =>    5, "Elf" =>   0, "Dwarf" =>   0, "Giantman" =>   0, "Halfling" =>   0, "Half-Elf" =>  -5, "Dark Elf" =>  -25, "Sylvankind" => -15, "Burghal Gnome" =>  -5, "Forest Gnome" =>   0, "Half-Krolvin" =>   0, "Erithian" =>   0, "Aelotoi" =>   0}, 
-            "Wehnimer's Landing"        => { "Human" =>    0, "Elf" =>   0, "Dwarf" =>   0, "Giantman" =>   0, "Halfling" =>   0, "Half-Elf" =>   0, "Dark Elf" =>   -5, "Sylvankind" =>   0, "Burghal Gnome" =>   0, "Forest Gnome" =>  -5, "Half-Krolvin" => -25, "Erithian" =>   0, "Aelotoi" =>   0}, 
-            "the town of Kharam-Dzu"    => { "Human" =>    0, "Elf" => -15, "Dwarf" =>   5, "Giantman" =>   0, "Halfling" =>   0, "Half-Elf" =>  -5, "Dark Elf" =>  -25, "Sylvankind" => -15, "Burghal Gnome" =>  -5, "Forest Gnome" => nil, "Half-Krolvin" =>  -5, "Erithian" => nil, "Aelotoi" =>  -5}, 
-            "Zhindel's Post"            => { "Human" =>  nil, "Elf" =>   0, "Dwarf" =>   5, "Giantman" => nil, "Halfling" => nil, "Half-Elf" => nil, "Dark Elf" =>  -15, "Sylvankind" => -15, "Burghal Gnome" =>   0, "Forest Gnome" => nil, "Half-Krolvin" =>   0, "Erithian" => nil, "Aelotoi" => nil}, 
-            "Zul Logoth"                => { "Human" =>    0, "Elf" => -15, "Dwarf" =>   5, "Giantman" =>   0, "Halfling" =>   0, "Half-Elf" =>   0, "Dark Elf" =>  -15, "Sylvankind" => -15, "Burghal Gnome" =>  -5, "Forest Gnome" =>   0, "Half-Krolvin" =>  -5, "Erithian" =>   0, "Aelotoi" =>  -5}, 
+            "Sylvarraend"               => { "Human" =>  -10, "Elf" => nil, "Dwarf" => -15, "Giantman" =>  -5, "Halfling" => nil, "Half-Elf" => -15, "Dark Elf" =>  -25, "Sylvankind" =>   0, "Burghal Gnome" => -15, "Forest Gnome" => nil, "Half-Krolvin" => -15, "Erithian" =>  -5, "Aelotoi" => nil},
+            "Ta'Illistim"               => { "Human" =>  -10, "Elf" =>   5, "Dwarf" => -15, "Giantman" =>  -5, "Halfling" =>  -5, "Half-Elf" => -15, "Dark Elf" =>  -25, "Sylvankind" =>   0, "Burghal Gnome" =>  -5, "Forest Gnome" =>  -5, "Half-Krolvin" => -15, "Erithian" =>  -5, "Aelotoi" =>  -5},
+            "Ta'Vaalor"                 => { "Human" =>  -10, "Elf" =>   5, "Dwarf" => -15, "Giantman" =>  -5, "Halfling" =>  -5, "Half-Elf" => -15, "Dark Elf" =>  -25, "Sylvankind" =>   0, "Burghal Gnome" =>  -5, "Forest Gnome" =>  -5, "Half-Krolvin" => -15, "Erithian" =>  -5, "Aelotoi" =>  -5},
+            "Cysaegir"                  => { "Human" =>   -5, "Elf" =>   0, "Dwarf" =>  -5, "Giantman" =>   0, "Halfling" =>  -5, "Half-Elf" =>  -5, "Dark Elf" =>    0, "Sylvankind" =>   0, "Burghal Gnome" =>  -5, "Forest Gnome" =>  -5, "Half-Krolvin" => -15, "Erithian" =>  -5, "Aelotoi" =>   5},
+            "the Isle of Four Winds"    => { "Human" =>    0, "Elf" =>   0, "Dwarf" =>   0, "Giantman" =>   0, "Halfling" =>   0, "Half-Elf" =>   0, "Dark Elf" =>    0, "Sylvankind" =>   0, "Burghal Gnome" =>   0, "Forest Gnome" =>   0, "Half-Krolvin" =>   0, "Erithian" =>   0, "Aelotoi" =>   0},
+            "Icemule Trace"             => { "Human" =>    0, "Elf" =>   0, "Dwarf" =>   0, "Giantman" => nil, "Halfling" =>   5, "Half-Elf" =>   0, "Dark Elf" =>   -5, "Sylvankind" =>   0, "Burghal Gnome" =>  -5, "Forest Gnome" =>   0, "Half-Krolvin" =>   0, "Erithian" =>   0, "Aelotoi" =>   0},
+            "Khazar's Hold"             => { "Human" =>  nil, "Elf" => nil, "Dwarf" =>   0, "Giantman" => nil, "Halfling" => nil, "Half-Elf" => nil, "Dark Elf" =>  -25, "Sylvankind" =>   0, "Burghal Gnome" =>   0, "Forest Gnome" => nil, "Half-Krolvin" => nil, "Erithian" => nil, "Aelotoi" => nil},
+            "the Northern Caravansary"  => { "Human" =>    0, "Elf" => nil, "Dwarf" => nil, "Giantman" =>   0, "Halfling" => nil, "Half-Elf" =>   0, "Dark Elf" =>   -5, "Sylvankind" =>   0, "Burghal Gnome" =>  -5, "Forest Gnome" => nil, "Half-Krolvin" => nil, "Erithian" => nil, "Aelotoi" => nil},
+            "the Pinefar Trading Post"  => { "Human" =>    0, "Elf" => nil, "Dwarf" =>   0, "Giantman" =>   0, "Halfling" =>   5, "Half-Elf" => nil, "Dark Elf" =>   -5, "Sylvankind" =>   0, "Burghal Gnome" =>   0, "Forest Gnome" => nil, "Half-Krolvin" => nil, "Erithian" => nil, "Aelotoi" => nil},
+            "River's Rest"              => { "Human" =>    5, "Elf" => -10, "Dwarf" =>   0, "Giantman" =>   0, "Halfling" =>   0, "Half-Elf" =>  -5, "Dark Elf" =>  -15, "Sylvankind" =>  -5, "Burghal Gnome" =>   0, "Forest Gnome" =>   0, "Half-Krolvin" => -15, "Erithian" =>  -5, "Aelotoi" =>  -5},
+            "the free port of Solhaven" => { "Human" =>    5, "Elf" =>   0, "Dwarf" =>   0, "Giantman" =>   0, "Halfling" =>   0, "Half-Elf" =>  -5, "Dark Elf" =>  -25, "Sylvankind" => -15, "Burghal Gnome" =>  -5, "Forest Gnome" =>   0, "Half-Krolvin" =>   0, "Erithian" =>   0, "Aelotoi" =>   0},
+            "Wehnimer's Landing"        => { "Human" =>    0, "Elf" =>   0, "Dwarf" =>   0, "Giantman" =>   0, "Halfling" =>   0, "Half-Elf" =>   0, "Dark Elf" =>   -5, "Sylvankind" =>   0, "Burghal Gnome" =>   0, "Forest Gnome" =>  -5, "Half-Krolvin" => -25, "Erithian" =>   0, "Aelotoi" =>   0},
+            "the town of Kharam-Dzu"    => { "Human" =>    0, "Elf" => -15, "Dwarf" =>   5, "Giantman" =>   0, "Halfling" =>   0, "Half-Elf" =>  -5, "Dark Elf" =>  -25, "Sylvankind" => -15, "Burghal Gnome" =>  -5, "Forest Gnome" => nil, "Half-Krolvin" =>  -5, "Erithian" => nil, "Aelotoi" =>  -5},
+            "Zhindel's Post"            => { "Human" =>  nil, "Elf" =>   0, "Dwarf" =>   5, "Giantman" => nil, "Halfling" => nil, "Half-Elf" => nil, "Dark Elf" =>  -15, "Sylvankind" => -15, "Burghal Gnome" =>   0, "Forest Gnome" => nil, "Half-Krolvin" =>   0, "Erithian" => nil, "Aelotoi" => nil},
+            "Zul Logoth"                => { "Human" =>    0, "Elf" => -15, "Dwarf" =>   5, "Giantman" =>   0, "Halfling" =>   0, "Half-Elf" =>   0, "Dark Elf" =>  -15, "Sylvankind" => -15, "Burghal Gnome" =>  -5, "Forest Gnome" =>   0, "Half-Krolvin" =>  -5, "Erithian" =>   0, "Aelotoi" =>  -5},
         }
 
         racial_adjustment = town_trading_modifier[town][Stats.race].to_i
 
         # Doesn't account for town adjustments
         trading_adjustment = 1.to_i - (((Skills.to_bonus(Skills.trading) + Stats.inf[1])/12) + racial_adjustment).to_f / 100
+        respond "My trading adjustment is #{trading_adjustment}"
         Cantrips::Locations.go2('gemshop')
         gems_with_values = Hash.new()
         Cantrips::Containers.open(container.id)
@@ -198,13 +253,8 @@ class Deeds4Gems
     end
 
     def self.get_next_deed_cost(deeds=get_current_deeds())
-        multiplier = (Char.level + deeds + 1) + 1
-        # The 'accepted' forumla fails as deeds increase regardless
-        # of level.  Unclear if it scales differently with current
-        # deeds versus current level, but I'm clearly seeing less
-        # accuracy as level increases even at a lower number of
-        # total deeds.
-        return (100 * multiplier)
+        # Alternate formula suggested on LNET multiple current deeds by 101 instead of 100.
+        return (Char.level * 100) + ((deeds + 1) * 101)
     end
 
     def self.select_gems(gemlist, needed, cheapest_first=true)
@@ -273,11 +323,13 @@ class Deeds4Gems
                 745,     # Ta'Illstim
                 4045,    # Wehminer's Landing
             ]
+
             allDeeds = cheapDeeds + [
                 10854,   # River's Rest
                 14176,   # Solhaven
                 5587,    # Vornavis Caravansay
                 9507,    # Zul Logoth
+                1982,   # Teras Isle
             ]
 
             # 10375  # Ta'Vaalor
@@ -290,8 +342,9 @@ class Deeds4Gems
 
             # Make sure we can generally get there from here
             path = Room.current.path_to(deedRoom)
-            if path.nil?
-                echo "ERROR: No way to get to the deed rooms from where you are!"
+
+            if path.nil? && deedRoom != Room.current.id
+                echo "ERROR: No way to get to the deed room from where you are!"
                 exit
             end
 
@@ -314,15 +367,15 @@ class Deeds4Gems
                 cost = get_next_deed_cost(deeds)
 
                 if ( cheapDeeds.include?(deedRoom) )
-                    cost /= 3
+                    cost = (cost / 2.5).to_i + 1
                 end
 
                 (gems_to_drop_list, gems_to_drop_value) = select_gems(gems, cost, false)#(deedRoom != 745 && !options.bigspender))
 
                 gems_to_drop_list.each{|gem| gems.delete(gem) }
 
-                if (gems_to_drop_value.to_i >= cost)
-                    Cantrips::Message.bold("Dropping #{gems_to_drop_value} silvers worth of gems.")                    
+                if (gems_to_drop_value.to_i >= cost || options.usesilvers)
+                    Cantrips::Message.bold("Dropping #{gems_to_drop_value} silvers worth of gems.")
                     Cantrips::Locations.go2(deedRoom.to_s)
 
                     if Room.current.id == 4045
@@ -372,8 +425,9 @@ class Deeds4Gems
                             fput "get ##{gem.id}"
                             fput "drop ##{gem.id} on censer"
                         }
-                        fput "meditate"
+
                         fput "pray"
+                        fput "meditate"
                         waitfor("You slowly rise to your feet and quietly leave.");
                         Cantrips::Locations.go2(deedRoom.to_s)
 
@@ -488,6 +542,135 @@ class Deeds4Gems
                     elsif Room.current.id == 14081 || # Northern Caravansay
                           Room.current.id ==  5587    # Vornavis Caravansay
                         use_brazier(gems_to_drop_list)
+
+                    elsif Room.current.id == 1982
+                        silver_wheel = [
+                            nil, # Lorminsta seems to be unhappy if we don't play with her wheels so make the initial setting the last one here.
+                            "dandelion",
+                            "bird",
+                            "seven",
+                            "growth",
+                            "person",
+                            "rock",
+                            "sun",
+                            "rose tree",
+                            "man",
+                            "harvest",
+                            "couple",
+                            "adulthood",
+                            "earth",
+                            "quartz",
+                            "woman",
+                            "dragon",
+                            "winter",
+                            "cavern",
+                            "death",
+                            "star"]
+
+                        gold_wheel = [
+                            nil, # Lorminsta seems to be unhappy if we don't play with her wheels so make the initial setting the last one here.
+                            "topaz",
+                            "child",
+                            "egg",
+                            "hole",
+                            "childhood",
+                            "bee",
+                            "amber",
+                            "deer",
+                            "twenty",
+                            "drakeling",
+                            "burrow",
+                            "boulder",
+                            "worm",
+                            "mushroom",
+                            "wolf",
+                            "thirty-three",
+                            "family",
+                            "mountain",
+                            "ant"]
+
+                        fput "go opening behind tapestry"
+
+                        if ( options.usesilvers )
+                            silvers_to_drop = (Char.level + deeds + 1) * 100
+                            total = silvers_to_drop
+
+                            loop {
+                                line = dothistimeout("put #{silvers_to_drop} silver in donation box", 2, /You're not ready yet\.|I believe you are ready now\./)
+                                break if line =~ /I believe you are ready now\./
+                                silvers_to_drop = 100
+                                total += 100
+                            }
+
+                            Cantrips::Message.bold("Used #{total} silvers at level #{Char.level} with #{deeds} current deeds")
+                        else
+                            gems_to_drop_list.each{|gem|
+                                fput "get ##{gem.id}"
+                                line = dothistimeout("put ##{gem.id} in donation box", 2,  /You're not ready yet\.|I believe you are ready now\./)
+                                break if line =~ /I believe you are ready now\./
+                            }
+                        end
+
+                        if ( GameObj.right_hand.noun != "bundle" && GameObj.left_hand.noun != "bundle" )
+                            Cantrips::Message.bold("... Something went horribly wrong. Stopping now!")
+                            exit
+                        end
+
+                        # level 31 + 2 deeds => 4000 was too much - 1K increments =-(
+                        # level 31 + 3 deeds => 4100 in 100 increments
+                        # level 31 + 4 deeds => 4000 worked?
+                        #       31 + 5       => 4300
+                        #       31 + 6       => 4800
+                        #       31 + 7       => 4300 silvers
+                        #       31 + 8       => 5000 silvers
+                        multimove("go arch", "down", "down", "down", "north", "go skiff")
+                        fput "sing All great princes, kings and queens,;Come before to hear Her sing.;Incense burnt for Her delight;Insures their souls another Night."
+                        waitfor "The skiff drifts into the dock, gently bumping to a stop."
+                        multimove("out", "go steps")
+                        line = waitfor("When it reopens, you see the picture in its iris")
+                        matchdata = /When it reopens, you see the picture in its iris has changed to \"(?<symbol>.*)\.\"/.match(line)
+                        echo "#{matchdata}"
+                        value_to_match = @@symbols.index(matchdata["symbol"])
+
+                        Cantrips::Message.bold("... initial value #{value_to_match}") if $debug
+
+                        loop {
+                            line = waitfor("gong")
+                            value_to_match -= 1
+                            break if line =~ /gong\.\"/
+                        }
+
+                        Cantrips::Message.bold(".... after gongs #{value_to_match}") if $debug
+
+                        silver_wheel.each{|silver|
+                            matched = false
+                            gold_wheel.each{|gold|
+                                if (@@symbols.index(silver) + @@symbols.index(gold)) == value_to_match
+                                    Cantrips::Message.bold(".... symbols are #{silver} and #{gold}") if $debug
+
+                                    1.upto(silver_wheel.index(silver)) {
+                                        fput "turn silver wheel"
+                                    }
+
+                                    1.upto(gold_wheel.index(gold)) {
+                                        fput "turn gold wheel"
+                                    }
+
+                                    matched = true
+                                end
+                            }
+
+                            break if matched
+                        }
+
+                        Cantrips::Message.bold(".... Let's try this.") if $debug
+
+                        fput "put bundle on statue"
+                        waitfor "Smiling, the ghostly visage elegantly nods to you, warming you to your very soul."
+                        multimove("out", "go skiff")
+                        fput "sing Depart, oh Night, from me be gone!;For I have heard Lorminstra's song.;Thy face, oh Night, she does make pale.;And now, from here, I shall set sail."
+                        waitfor "The skiff drifts into the dock, gently bumping to a stop."
+                        multimove("out", "south", "up", "up", "up", "go arch", "go open")
                     end
 
                     deeds = get_current_deeds
